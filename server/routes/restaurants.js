@@ -4,12 +4,18 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Rota de teste simples
+router.get('/test', (req, res) => {
+  res.json({ message: 'Rota de teste funcionando!' });
+});
+
 // Buscar todos os restaurantes
 router.get('/', async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', lat, lng, radius = 10 } = req.query;
     const offset = (page - 1) * limit;
 
+    // Query corrigida - sem referenciar f.id
     let query = `
       SELECT r.*, u.username as created_by_username,
              COUNT(DISTINCT p.id) as posts_count,
@@ -30,7 +36,8 @@ router.get('/', async (req, res) => {
       queryParams.push(`%${search}%`);
     }
 
-    // Busca por proximidade (PostGIS)
+    // Busca por proximidade (PostGIS) - comentada temporariamente
+    /*
     if (lat && lng) {
       whereConditions.push(`
         ST_DWithin(
@@ -41,6 +48,7 @@ router.get('/', async (req, res) => {
       `);
       queryParams.push(parseFloat(lng), parseFloat(lat), parseFloat(radius));
     }
+    */
 
     if (whereConditions.length > 0) {
       query += ` WHERE ${whereConditions.join(' AND ')}`;
@@ -53,16 +61,21 @@ router.get('/', async (req, res) => {
     `;
     queryParams.push(parseInt(limit), offset);
 
+    console.log('Query executada:', query);
+    console.log('Parâmetros:', queryParams);
+
     const restaurants = await pool.query(query, queryParams);
+
+    console.log('Resultado da query:', restaurants.rows);
 
     // Contar total para paginação
     let countQuery = `
-      SELECT COUNT(DISTINCT r.id) 
+      SELECT COUNT(*) 
       FROM restaurants r
     `;
     
     if (whereConditions.length > 0) {
-      countQuery += ` WHERE ${whereConditions.slice(0, -2).join(' AND ')}`;
+      countQuery += ` WHERE ${whereConditions.join(' AND ')}`;
     }
 
     const totalCount = await pool.query(countQuery, queryParams.slice(0, -2));
@@ -78,7 +91,69 @@ router.get('/', async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao buscar restaurantes:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Erro interno do servidor', 
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
+
+// Criar novo restaurante
+router.post('/', auth, async (req, res) => {
+  try {
+    const { name, address, description, cuisine_type, url } = req.body;
+    const created_by = req.user.id;
+
+    // Validações básicas
+    if (!name || !address) {
+      return res.status(400).json({ 
+        error: 'Nome e endereço são obrigatórios' 
+      });
+    }
+
+    // Verificar se já existe um restaurante com o mesmo nome e endereço
+    const existingRestaurant = await pool.query(
+      'SELECT id FROM restaurants WHERE name = $1 AND address = $2',
+      [name, address]
+    );
+
+    if (existingRestaurant.rows.length > 0) {
+      return res.status(409).json({ 
+        error: 'Já existe um restaurante com este nome e endereço' 
+      });
+    }
+
+    // Inserir novo restaurante
+    const insertQuery = `
+      INSERT INTO restaurants (name, address, description, cuisine_type, url, created_by, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      RETURNING *
+    `;
+
+    const result = await pool.query(insertQuery, [
+      name, 
+      address, 
+      description || 'Sem descrição', 
+      cuisine_type || 'Não especificado',
+      url || null,
+      created_by
+    ]);
+
+    const newRestaurant = result.rows[0];
+
+    res.status(201).json({
+      message: 'Restaurante criado com sucesso!',
+      restaurant: newRestaurant
+    });
+
+  } catch (error) {
+    console.error('Erro ao criar restaurante:', error);
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      details: error.message 
+    });
   }
 });
 
@@ -87,7 +162,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const restaurant = await pool.query(`
+    const query = `
       SELECT r.*, u.username as created_by_username,
              COUNT(DISTINCT p.id) as posts_count,
              AVG(p.rating) as average_rating,
@@ -98,132 +173,26 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN favorites f ON r.id = f.restaurant_id
       WHERE r.id = $1
       GROUP BY r.id, u.username
-    `, [id]);
+    `;
 
-    if (restaurant.rows.length === 0) {
-      return res.status(404).json({ error: 'Restaurante não encontrado' });
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Restaurante não encontrado' 
+      });
     }
 
-    res.json(restaurant.rows[0]);
+    res.json({
+      restaurant: result.rows[0]
+    });
 
   } catch (error) {
     console.error('Erro ao buscar restaurante:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Criar novo restaurante
-router.post('/', auth, async (req, res) => {
-  try {
-    const { name, description, address, latitude, longitude } = req.body;
-    const userId = req.user.id;
-
-    if (!name || !address) {
-      return res.status(400).json({ error: 'Nome e endereço são obrigatórios' });
-    }
-
-    // Verificar se restaurante já existe
-    const existingRestaurant = await pool.query(
-      'SELECT id FROM restaurants WHERE name = $1 AND address = $2',
-      [name, address]
-    );
-
-    if (existingRestaurant.rows.length > 0) {
-      return res.status(400).json({ error: 'Restaurante já existe neste endereço' });
-    }
-
-    // Criar restaurante com coordenadas PostGIS
-    const newRestaurant = await pool.query(`
-      INSERT INTO restaurants (name, description, address, location, created_by)
-      VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326), $6)
-      RETURNING *
-    `, [name, description, address, longitude, latitude, userId]);
-
-    res.status(201).json({
-      message: 'Restaurante criado com sucesso!',
-      restaurant: newRestaurant.rows[0]
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      details: error.message 
     });
-
-  } catch (error) {
-    console.error('Erro ao criar restaurante:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Atualizar restaurante
-router.put('/:id', auth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, description, address, latitude, longitude } = req.body;
-    const userId = req.user.id;
-
-    // Verificar se usuário criou o restaurante
-    const restaurant = await pool.query(
-      'SELECT created_by FROM restaurants WHERE id = $1',
-      [id]
-    );
-
-    if (restaurant.rows.length === 0) {
-      return res.status(404).json({ error: 'Restaurante não encontrado' });
-    }
-
-    if (restaurant.rows[0].created_by !== userId) {
-      return res.status(403).json({ error: 'Sem permissão para editar este restaurante' });
-    }
-
-    const updatedRestaurant = await pool.query(`
-      UPDATE restaurants 
-      SET name = $1, description = $2, address = $3, 
-          location = ST_SetSRID(ST_MakePoint($4, $5), 4326)
-      WHERE id = $6
-      RETURNING *
-    `, [name, description, address, longitude, latitude, id]);
-
-    res.json({
-      message: 'Restaurante atualizado com sucesso!',
-      restaurant: updatedRestaurant.rows[0]
-    });
-
-  } catch (error) {
-    console.error('Erro ao atualizar restaurante:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Buscar restaurantes próximos (PostGIS)
-router.get('/nearby/:lat/:lng', async (req, res) => {
-  try {
-    const { lat, lng } = req.params;
-    const { radius = 5 } = req.query; // raio em km
-
-    const nearbyRestaurants = await pool.query(`
-      SELECT r.*, 
-             ST_Distance(r.location::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) / 1000 as distance_km,
-             u.username as created_by_username,
-             COUNT(DISTINCT p.id) as posts_count,
-             AVG(p.rating) as average_rating
-      FROM restaurants r
-      LEFT JOIN users u ON r.created_by = u.id
-      LEFT JOIN posts p ON r.id = p.restaurant_id
-      WHERE ST_DWithin(
-        r.location::geography, 
-        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, 
-        $3 * 1000
-      )
-      GROUP BY r.id, u.username
-      ORDER BY distance_km ASC
-      LIMIT 20
-    `, [lng, lat, radius]);
-
-    res.json({
-      restaurants: nearbyRestaurants.rows,
-      search_location: { lat: parseFloat(lat), lng: parseFloat(lng) },
-      radius_km: parseFloat(radius)
-    });
-
-  } catch (error) {
-    console.error('Erro ao buscar restaurantes próximos:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 

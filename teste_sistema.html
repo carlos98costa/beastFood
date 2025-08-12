@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste do Sistema BeastFood</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background-color: #d4edda; color: #155724; }
+        .status.error { background-color: #f8d7da; color: #721c24; }
+        .status.warning { background-color: #fff3cd; color: #856404; }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover { background: #0056b3; }
+        .test-button:disabled { background: #6c757d; cursor: not-allowed; }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste do Sistema BeastFood</h1>
+    
+    <div class="test-section">
+        <h2>📋 Status do Sistema</h2>
+        <div id="system-status">
+            <div class="status warning">Verificando status...</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 Teste de Conectividade</h2>
+        <button class="test-button" onclick="testServerConnection()">Testar Conexão com Servidor</button>
+        <button class="test-button" onclick="testDatabaseConnection()">Testar Conexão com Banco</button>
+        <div id="connection-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🍽️ Teste de Restaurantes</h2>
+        <button class="test-button" onclick="testRestaurantCreation()">Testar Criação de Restaurante</button>
+        <button class="test-button" onclick="testRestaurantSearch()">Testar Busca de Restaurantes</button>
+        <button class="test-button" onclick="testRestaurantById()">Testar Busca por ID</button>
+        <div id="restaurant-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>👤 Teste de Usuários</h2>
+        <button class="test-button" onclick="testUserCreation()">Testar Criação de Usuário</button>
+        <button class="test-button" onclick="testUserLogin()">Testar Login</button>
+        <button class="test-button" onclick="testUserProfile()">Testar Perfil por Username</button>
+        <button class="test-button" onclick="testUserPosts()">Testar Posts do Usuário</button>
+        <button class="test-button" onclick="testImageUpload()">Testar Upload de Imagem</button>
+        <div id="user-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Teste de Posts</h2>
+        <button class="test-button" onclick="testPostCreation()">Testar Criação de Post</button>
+        <button class="test-button" onclick="testPostFeed()">Testar Feed de Posts</button>
+        <button class="test-button" onclick="testCreatePostModal()">Testar Criação de Post via Modal</button>
+        <div id="post-results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let authToken = null;
+
+        // Função para mostrar resultados
+        function showResult(containerId, message, isError = false) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+
+        // Função para limpar resultados
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        // Teste de conexão com servidor
+        async function testServerConnection() {
+            clearResults('connection-results');
+            try {
+                const response = await fetch(`${API_BASE}/test`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('connection-results', `✅ Servidor conectado: ${data.message}`);
+                } else {
+                    showResult('connection-results', `❌ Erro no servidor: ${response.status}`, true);
+                }
+            } catch (error) {
+                showResult('connection-results', `❌ Erro de conexão: ${error.message}`, true);
+            }
+        }
+
+        // Teste de conexão com banco
+        async function testDatabaseConnection() {
+            clearResults('connection-results');
+            try {
+                const response = await fetch(`${API_BASE}/test/db`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('connection-results', `✅ Banco conectado: ${data.message}`);
+                } else {
+                    showResult('connection-results', `❌ Erro no banco: ${response.status}`, true);
+                }
+            } catch (error) {
+                showResult('connection-results', `❌ Erro de conexão: ${error.message}`, true);
+            }
+        }
+
+        // Teste de criação de usuário
+        async function testUserCreation() {
+            clearResults('user-results');
+            try {
+                const testUser = {
+                    username: `testuser_${Date.now()}`,
+                    email: `test_${Date.now()}@example.com`,
+                    password: 'test123',
+                    name: 'Usuário Teste'
+                };
+
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testUser)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('user-results', `✅ Usuário criado: ${data.user.username}`);
+                    authToken = data.accessToken;
+                } else {
+                    const error = await response.json();
+                    showResult('user-results', `❌ Erro ao criar usuário: ${error.error}`, true);
+                }
+            } catch (error) {
+                showResult('user-results', `❌ Erro de conexão: ${error.message}`, true);
+            }
+        }
+
+        // Teste de login
+        async function testUserLogin() {
+            clearResults('user-results');
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('user-results', `✅ Login realizado: ${data.user.username}`);
+                    authToken = data.accessToken;
+                } else {
+                    const error = await response.json();
+                    showResult('user-results', `❌ Erro no login: ${error.error}`, true);
+                }
+            } catch (error) {
+                showResult('user-results', `❌ Erro de conexão: ${error.message}`, true);
+            }
+        }
+
+        // Teste de criação de restaurante
+        async function testRestaurantCreation() {
+          clearResults('restaurant-results');
+          if (!authToken) {
+            showResult('restaurant-results', '⚠️ Faça login primeiro', true);
+            return;
+          }
+
+          try {
+            const testRestaurant = {
+              name: `Restaurante Teste ${Date.now()}`,
+              address: 'Rua Teste, 123',
+              description: 'Restaurante para testes',
+              cuisine_type: 'Brasileira',
+              url: 'https://www.google.com/search?q=restaurante+teste'
+            };
+
+            const response = await fetch(`${API_BASE}/restaurants`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+              },
+              body: JSON.stringify(testRestaurant)
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              showResult('restaurant-results', `✅ Restaurante criado: ${data.restaurant.name}`);
+            } else {
+              const error = await response.json();
+              showResult('restaurant-results', `❌ Erro ao criar restaurante: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('restaurant-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Teste de busca de restaurantes
+        async function testRestaurantSearch() {
+          clearResults('restaurant-results');
+          try {
+            const response = await fetch(`${API_BASE}/restaurants`);
+            if (response.ok) {
+              const data = await response.json();
+              showResult('restaurant-results', `✅ Restaurantes encontrados: ${data.restaurants.length}`);
+            } else {
+              const error = await response.json();
+              showResult('restaurant-results', `❌ Erro na busca: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('restaurant-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Teste de busca de restaurante por ID
+        async function testRestaurantById() {
+          clearResults('restaurant-results');
+          try {
+            const response = await fetch(`${API_BASE}/restaurants/1`);
+            if (response.ok) {
+              const data = await response.json();
+              showResult('restaurant-results', `✅ Restaurante encontrado: ${data.restaurant.name}`);
+            } else {
+              const error = await response.json();
+              showResult('restaurant-results', `❌ Erro na busca: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('restaurant-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Teste de upload de imagem (simulado)
+        async function testImageUpload() {
+          clearResults('user-results');
+          if (!authToken) {
+            showResult('user-results', '⚠️ Faça login primeiro', true);
+            return;
+          }
+
+          try {
+            // Simular upload de imagem
+            const formData = new FormData();
+            const blob = new Blob(['test'], { type: 'image/jpeg' });
+            formData.append('image', blob, 'test.jpg');
+            formData.append('type', 'avatar');
+
+            const response = await fetch(`${API_BASE}/users/upload-image`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${authToken}`
+              },
+              body: formData
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              showResult('user-results', `✅ Upload de imagem testado: ${data.message}`);
+            } else {
+              const error = await response.json();
+              showResult('user-results', `❌ Erro no upload: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('user-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Teste de criação de post
+        async function testPostCreation() {
+            clearResults('post-results');
+            if (!authToken) {
+                showResult('post-results', '⚠️ Faça login primeiro', true);
+                return;
+            }
+
+            try {
+                const testPost = {
+                    restaurant_id: 1,
+                    content: 'Post de teste para verificar o sistema',
+                    rating: 5
+                };
+
+                const response = await fetch(`${API_BASE}/posts`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(testPost)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('post-results', `✅ Post criado: ID ${data.post.id}`);
+                } else {
+                    const error = await response.json();
+                    showResult('post-results', `❌ Erro ao criar post: ${error.error}`, true);
+                }
+            } catch (error) {
+                showResult('post-results', `❌ Erro de conexão: ${error.message}`, true);
+            }
+        }
+
+        // Teste de feed de posts
+        async function testPostFeed() {
+            clearResults('post-results');
+            try {
+                const response = await fetch(`${API_BASE}/posts`);
+                if (response.ok) {
+                    const data = await response.json();
+                    showResult('post-results', `✅ Posts encontrados: ${data.posts.length}`);
+                } else {
+                    const error = await response.json();
+                    showResult('post-results', `❌ Erro na busca: ${error.error}`, true);
+                }
+            } catch (error) {
+                showResult('post-results', `❌ Erro de conexão: ${error.message}`, true);
+            }
+        }
+
+        // Teste de criação de post via modal
+        async function testCreatePostModal() {
+          clearResults('post-results');
+          if (!authToken) {
+            showResult('post-results', '⚠️ Faça login primeiro', true);
+            return;
+          }
+
+          try {
+            // Primeiro criar um restaurante para o teste
+            const testRestaurant = {
+              name: `Restaurante Modal Teste ${Date.now()}`,
+              address: 'Rua Modal, 456',
+              description: 'Restaurante para teste do modal',
+              cuisine_type: 'Italiana',
+              url: 'https://www.google.com/search?q=restaurante+modal'
+            };
+
+            const restaurantResponse = await fetch(`${API_BASE}/restaurants`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+              },
+              body: JSON.stringify(testRestaurant)
+            });
+
+            if (!restaurantResponse.ok) {
+              throw new Error('Erro ao criar restaurante para teste');
+            }
+
+            const restaurantData = await restaurantResponse.json();
+            const restaurantId = restaurantData.restaurant.id;
+
+            // Agora criar o post
+            const testPost = {
+              restaurant_id: restaurantId,
+              content: 'Post de teste via modal - Excelente experiência!',
+              rating: 5
+            };
+
+            const response = await fetch(`${API_BASE}/posts`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+              },
+              body: JSON.stringify(testPost)
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              showResult('post-results', `✅ Post criado via modal: ID ${data.post.id} - Restaurante: ${restaurantData.restaurant.name}`);
+            } else {
+              const error = await response.json();
+              showResult('post-results', `❌ Erro ao criar post via modal: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('post-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Teste de busca de usuário por username
+        async function testUserProfile() {
+          clearResults('user-results');
+          try {
+            const response = await fetch(`${API_BASE}/users/profile/admin`);
+            if (response.ok) {
+              const data = await response.json();
+              showResult('user-results', `✅ Perfil encontrado: ${data.user.username}`);
+            } else {
+              const error = await response.json();
+              showResult('user-results', `❌ Erro na busca: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('user-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Teste de posts do usuário
+        async function testUserPosts() {
+          clearResults('user-results');
+          try {
+            const response = await fetch(`${API_BASE}/users/profile/admin/posts?limit=5`);
+            if (response.ok) {
+              const data = await response.json();
+              showResult('user-results', `✅ Posts encontrados: ${data.posts.length}`);
+            } else {
+              const error = await response.json();
+              showResult('user-results', `❌ Erro na busca: ${error.error}`, true);
+            }
+          } catch (error) {
+            showResult('user-results', `❌ Erro de conexão: ${error.message}`, true);
+          }
+        }
+
+        // Verificar status inicial
+        window.addEventListener('load', async () => {
+            const statusDiv = document.getElementById('system-status');
+            try {
+                const response = await fetch(`${API_BASE}/test`);
+                if (response.ok) {
+                    statusDiv.innerHTML = '<div class="status success">✅ Sistema funcionando normalmente</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ Problemas no sistema</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">❌ Sistema offline</div>';
+            }
+        });
+    </script>
+</body>
+</html>

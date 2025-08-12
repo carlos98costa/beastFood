@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaSearch, FaUser, FaSignOutAlt, FaPlus, FaUtensils } from 'react-icons/fa';
+import { FaUtensils, FaSearch, FaPlus, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import CreatePostModal from './CreatePostModal';
 import './Navbar.css';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
-
-  console.log('Navbar - user:', user);
+  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -25,6 +25,12 @@ const Navbar = () => {
     logout();
     navigate('/');
     setShowUserMenu(false);
+  };
+
+  const handlePostCreated = (newPost) => {
+    // Fechar modal e redirecionar para o perfil do usuário
+    setShowCreatePostModal(false);
+    navigate(`/profile/${user.username}`);
   };
 
   const isActive = (path) => location.pathname === path;
@@ -53,13 +59,13 @@ const Navbar = () => {
         <div className="navbar-nav">
           {user ? (
             <>
-              <Link 
-                to="/create-post" 
-                className={`nav-link ${isActive('/create-post') ? 'active' : ''}`}
+              <button 
+                onClick={() => setShowCreatePostModal(true)}
+                className="nav-link create-post-button"
               >
                 <FaPlus />
                 <span>Novo Post</span>
-              </Link>
+              </button>
               
               <div className="user-menu">
                 <button
@@ -83,7 +89,7 @@ const Navbar = () => {
                 {showUserMenu && (
                   <div className="user-dropdown">
                     <Link 
-                      to={`/profile/${user.id}`}
+                      to={`/profile/${user.username}`}
                       className="dropdown-item"
                       onClick={() => setShowUserMenu(false)}
                     >
@@ -113,6 +119,14 @@ const Navbar = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de Criação de Avaliação */}
+      <CreatePostModal
+        isOpen={showCreatePostModal}
+        onClose={() => setShowCreatePostModal(false)}
+        onPostCreated={handlePostCreated}
+        currentUser={user}
+      />
     </nav>
   );
 };

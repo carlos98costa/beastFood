@@ -19,6 +19,7 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     bio TEXT,
     profile_picture TEXT,
+    cover_picture TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 

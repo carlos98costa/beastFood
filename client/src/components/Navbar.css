@@ -188,6 +188,34 @@
   background: #fdf2f2;
 }
 
+/* Botão de Criação de Post */
+.create-post-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: #1877f2;
+  font-weight: 600;
+}
+
+.create-post-button:hover {
+  background: #f0f8ff;
+  transform: translateY(-1px);
+}
+
+.create-post-button:active {
+  transform: translateY(0);
+}
+
+.create-post-button svg {
+  font-size: 16px;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   .navbar-container {
