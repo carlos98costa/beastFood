@@ -1,0 +1,16 @@
+.profile-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.profile-container h1 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.profile-container p {
+  color: #666;
+  font-size: 1.1rem;
+}

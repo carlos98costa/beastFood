@@ -1,0 +1,16 @@
+.restaurant-detail-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.restaurant-detail-container h1 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.restaurant-detail-container p {
+  color: #666;
+  font-size: 1.1rem;
+}
