@@ -136,3 +136,4 @@ const RestaurantPhotos = ({ photos = [], restaurantName = '', restaurantId }) =>
 };
 
 export default RestaurantPhotos;
+

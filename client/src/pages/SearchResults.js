@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { FaUtensils, FaUser, FaStar, FaHeart, FaMapMarkerAlt, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaUtensils, FaUser, FaStar, FaHeart, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
 import axios from 'axios';
 import './SearchResults.css';
 
@@ -17,9 +17,9 @@ function SearchResults() {
     if (query) {
       performSearch();
     }
-  }, [query, activeTab, currentPage]);
+  }, [query, activeTab, currentPage, performSearch]);
 
-  const performSearch = async () => {
+  const performSearch = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -39,7 +39,7 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [query, activeTab, currentPage]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);

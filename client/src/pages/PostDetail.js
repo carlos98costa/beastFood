@@ -11,7 +11,7 @@ function PostDetail() {
   const [commentCount, setCommentCount] = useState(0);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
   const { id } = useParams();
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
 
   // Buscar detalhes do post

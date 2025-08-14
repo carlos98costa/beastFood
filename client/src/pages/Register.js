@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import GoogleLogin from '../components/GoogleLogin';
 import './Register.css';
 
 function Register() {
@@ -132,6 +133,22 @@ function Register() {
             {loading ? 'Criando conta...' : 'Criar conta'}
           </button>
         </form>
+
+        <div className="register-divider">
+          <span>ou</span>
+        </div>
+
+        <GoogleLogin
+          onSuccess={(user) => {
+            toast.success(`Bem-vindo, ${user.name}!`);
+            navigate('/');
+          }}
+          onError={(error) => {
+            toast.error(error);
+          }}
+          buttonText="Criar conta com Google"
+          className="google-login-full"
+        />
 
         <div className="register-footer">
           <p>

@@ -1,4 +1,5 @@
 const authService = require('./auth.service');
+const googleAuthService = require('./google-auth.service');
 
 class AuthController {
   // Registro de usuário
@@ -188,6 +189,48 @@ class AuthController {
     } catch (error) {
       console.error('Erro no refresh token:', error);
       res.status(401).json({ error: 'Refresh token inválido' });
+    }
+  }
+
+  // Login com Google
+  async googleLogin(req, res) {
+    try {
+      const { accessToken } = req.body;
+      
+      if (!accessToken) {
+        return res.status(400).json({ error: 'Access token do Google é obrigatório' });
+      }
+
+      console.log('Tentativa de login com Google...');
+      console.log('Access token recebido:', accessToken.substring(0, 20) + '...');
+
+      // Buscar dados do usuário usando o access token
+      const user = await googleAuthService.findOrCreateGoogleUserWithToken(accessToken);
+      console.log('Usuário Google processado:', user.username);
+
+      // Gerar tokens JWT
+      const { accessToken: jwtAccessToken, refreshToken } = googleAuthService.generateTokens(user.id, user.username);
+
+      // Configurar cookie HTTPOnly para refresh token
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      });
+
+      // Remover senha do objeto de resposta
+      const { password_hash, ...userWithoutPassword } = user;
+
+      res.json({
+        message: 'Login com Google realizado com sucesso!',
+        user: userWithoutPassword,
+        accessToken: jwtAccessToken
+      });
+
+    } catch (error) {
+      console.error('Erro no login com Google:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }
 

@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaUpload, FaSave, FaTimes, FaMapMarkerAlt, FaUtensils, FaGlobe, FaImage } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaMapMarkerAlt, FaGlobe, FaCamera, FaCog, FaStar, FaClock } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import ImageUpload from './ImageUpload';
+// ImageUpload removido pois não estava sendo utilizado
+import RestaurantPhotoManager from './RestaurantPhotoManager';
+import RestaurantServicesTab from './RestaurantServicesTab';
+import RestaurantHighlightsTab from './RestaurantHighlightsTab';
+import RestaurantOperatingHoursTab from './RestaurantOperatingHoursTab';
 import './EditRestaurantModal.css';
 
 const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated }) => {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
+  const [activeTab, setActiveTab] = useState('info'); // 'info', 'photos', 'services', 'highlights', 'operating-hours'
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -19,17 +24,9 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
     source_id: ''
   });
   
-  const [images, setImages] = useState({
-    main_photo: null,
-    logo: null
-  });
-  
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [imagePreview, setImagePreview] = useState({
-    main_photo: null,
-    logo: null
-  });
+  // Preview de imagem removido pois não estava sendo utilizado
 
   // Configurar axios com token
   const restaurantAxios = axios.create({
@@ -43,7 +40,7 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
     if (token) {
       restaurantAxios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
-  }, [token]);
+  }, [token, restaurantAxios.defaults.headers.common]);
 
   useEffect(() => {
     if (restaurant && isOpen) {
@@ -59,31 +56,11 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
         source_id: restaurant.source_id || ''
       });
 
-      // Configurar previews de imagens existentes
-      if (restaurant.main_photo_url) {
-        setImagePreview(prev => ({ ...prev, main_photo: restaurant.main_photo_url }));
-      }
-      if (restaurant.logo_url) {
-        setImagePreview(prev => ({ ...prev, logo: restaurant.logo_url }));
-      }
+      // Configurar previews de imagens existentes - removido pois não estava sendo utilizado
     }
   }, [restaurant, isOpen]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Limpar erro do campo
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: null
-      }));
-    }
-  };
+  // handleInputChange removido pois não estava sendo utilizado
 
   const handleImageUpload = async (type, file) => {
     try {
@@ -102,15 +79,12 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
       });
 
       if (response.data.success) {
-        setImages(prev => ({
-          ...prev,
-          [type]: file
-        }));
+        // setImages(prev => ({ // This line was removed as per the edit hint
+        //   ...prev,
+        //   [type]: file
+        // }));
         
-        setImagePreview(prev => ({
-          ...prev,
-          [type]: URL.createObjectURL(file)
-        }));
+        // setImagePreview removido pois não estava sendo utilizado
 
         // Atualizar o restaurante com a nova URL da imagem
         if (type === 'main_photo') {
@@ -141,8 +115,8 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
       newErrors.address = 'Endereço é obrigatório';
     }
     
-    if (formData.phone && !/^[\d\s\-\(\)\+]+$/.test(formData.phone)) {
-      newErrors.phone = 'Telefone inválido';
+    if (formData.phone && !/^[\d\s()\-+]+$/.test(formData.phone)) {
+      newErrors.phone = 'Telefone deve conter apenas números, espaços, parênteses, hífens e +';
     }
     
     if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
@@ -203,334 +177,270 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
     }
   };
 
-  const handleSourceTypeChange = (e) => {
-    const newSourceType = e.target.value;
-    setFormData(prev => ({
-      ...prev,
-      source_type: newSourceType,
-      source_id: newSourceType === 'Manual' ? '' : prev.source_id
-    }));
-  };
+  // handleSourceTypeChange removido pois não estava sendo utilizado
 
-  const renderSourceInfo = () => {
-    if (formData.source_type === 'OSM') {
-      return (
-        <div className="source-info osm">
-          <FaGlobe className="source-icon" />
-          <span>Importado do OpenStreetMap</span>
-          {formData.source_id && (
-            <span className="source-id">ID: {formData.source_id}</span>
-          )}
-        </div>
-      );
-    } else if (formData.source_type === 'Google Places') {
-      return (
-        <div className="source-info google">
-          <FaGlobe className="source-icon" />
-          <span>Importado do Google Places</span>
-          {formData.source_id && (
-            <span className="source-id">ID: {formData.source_id}</span>
-          )}
-        </div>
-      );
-    } else {
-      return (
-        <div className="source-info manual">
-          <FaEdit className="source-icon" />
-          <span>Criado manualmente</span>
-        </div>
-      );
-    }
+  // renderSourceInfo removido pois não estava sendo utilizado
+
+  // handleRestaurantUpdated removido pois não estava sendo utilizado
+
+  const handlePhotosUpdated = () => {
+    // Atualizar as fotos no restaurante sem fechar o modal
+    // Apenas recarregar os dados do restaurante se necessário
+    console.log('🔄 Fotos atualizadas, mantendo modal aberto');
   };
 
   if (!isOpen || !restaurant) return null;
 
   return (
-    <div className="edit-restaurant-modal-overlay">
-      <div className="edit-restaurant-modal">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>✏️ Editar Restaurante</h2>
-          <button onClick={onClose} className="close-btn">
+          <h2>Editar Restaurante</h2>
+          <button className="close-button" onClick={onClose}>
             <FaTimes />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="edit-form">
-          {/* Informações Básicas */}
-          <div className="form-section">
-            <h3>📋 Informações Básicas</h3>
-            
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="name">Nome *</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className={errors.name ? 'error' : ''}
-                  placeholder="Nome do restaurante"
-                />
-                {errors.name && <span className="error-message">{errors.name}</span>}
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="cuisine_type">Tipo de Cozinha</label>
-                <select
-                  id="cuisine_type"
-                  name="cuisine_type"
-                  value={formData.cuisine_type}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Selecione...</option>
-                  <option value="Brasileira">Brasileira</option>
-                  <option value="Italiana">Italiana</option>
-                  <option value="Japonesa">Japonesa</option>
-                  <option value="Chinesa">Chinesa</option>
-                  <option value="Mexicana">Mexicana</option>
-                  <option value="Árabe">Árabe</option>
-                  <option value="Fast Food">Fast Food</option>
-                  <option value="Pizzaria">Pizzaria</option>
-                  <option value="Churrascaria">Churrascaria</option>
-                  <option value="Padaria">Padaria</option>
-                  <option value="Bar">Bar</option>
-                  <option value="Café">Café</option>
-                  <option value="Outros">Outros</option>
-                </select>
-              </div>
-            </div>
+        {/* Abas */}
+        <div className="modal-tabs">
+          <button
+            className={`tab-button ${activeTab === 'info' ? 'active' : ''}`}
+            onClick={() => setActiveTab('info')}
+          >
+            <FaEdit />
+            Informações
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'photos' ? 'active' : ''}`}
+            onClick={() => setActiveTab('photos')}
+          >
+            <FaCamera />
+            Fotos ({restaurant.photos ? restaurant.photos.length : 0})
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'services' ? 'active' : ''}`}
+            onClick={() => setActiveTab('services')}
+          >
+            <FaCog />
+            Serviços
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'highlights' ? 'active' : ''}`}
+            onClick={() => setActiveTab('highlights')}
+          >
+            <FaStar />
+            Highlights
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'operating-hours' ? 'active' : ''}`}
+            onClick={() => setActiveTab('operating-hours')}
+          >
+            <FaClock />
+            Horários
+          </button>
+        </div>
 
-            <div className="form-group">
-              <label htmlFor="description">Descrição</label>
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                rows="3"
-                placeholder="Descreva o restaurante..."
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="address">Endereço *</label>
-                <div className="input-with-icon">
-                  <FaMapMarkerAlt className="input-icon" />
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className={errors.address ? 'error' : ''}
-                    placeholder="Endereço completo"
-                  />
+        {/* Conteúdo das abas */}
+        {activeTab === 'info' && (
+          <div className="tab-content">
+            <div className="edit-form">
+              <div className="form-section">
+                <h3>
+                  <FaEdit />
+                  Informações Básicas
+                </h3>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="name">Nome do Restaurante *</label>
+                    <input
+                      type="text"
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className={errors.name ? 'error' : ''}
+                      required
+                    />
+                    {errors.name && <div className="error-message">{errors.name}</div>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="cuisine_type">Tipo de Culinária</label>
+                    <input
+                      type="text"
+                      id="cuisine_type"
+                      value={formData.cuisine_type}
+                      onChange={(e) => setFormData({ ...formData, cuisine_type: e.target.value })}
+                    />
+                  </div>
                 </div>
-                {errors.address && <span className="error-message">{errors.address}</span>}
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="price_range">Faixa de Preço</label>
-                <select
-                  id="price_range"
-                  name="price_range"
-                  value={formData.price_range}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Selecione...</option>
-                  <option value="1">$ - Econômico</option>
-                  <option value="2">$$ - Moderado</option>
-                  <option value="3">$$$ - Caro</option>
-                  <option value="4">$$$$ - Muito Caro</option>
-                  <option value="5">$$$$$ - Luxuoso</option>
-                </select>
-                {errors.price_range && <span className="error-message">{errors.price_range}</span>}
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="phone">Telefone</label>
-                <input
-                  type="text"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className={errors.phone ? 'error' : ''}
-                  placeholder="(11) 99999-9999"
-                />
-                {errors.phone && <span className="error-message">{errors.phone}</span>}
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="website">Website</label>
-                <input
-                  type="url"
-                  id="website"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleInputChange}
-                  className={errors.website ? 'error' : ''}
-                  placeholder="https://exemplo.com"
-                />
-                {errors.website && <span className="error-message">{errors.website}</span>}
-              </div>
-            </div>
-          </div>
-
-          {/* Fonte do Estabelecimento */}
-          <div className="form-section">
-            <h3>🔗 Fonte do Estabelecimento</h3>
-            
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="source_type">Tipo de Fonte</label>
-                <select
-                  id="source_type"
-                  name="source_type"
-                  value={formData.source_type}
-                  onChange={handleSourceTypeChange}
-                >
-                  <option value="OSM">OpenStreetMap</option>
-                  <option value="Google Places">Google Places</option>
-                  <option value="Manual">Manual</option>
-                </select>
-              </div>
-              
-              {formData.source_type !== 'Manual' && (
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="address">Endereço</label>
+                    <div className="input-with-icon">
+                      <FaMapMarkerAlt className="input-icon" />
+                      <input
+                        type="text"
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        className={errors.address ? 'error' : ''}
+                      />
+                    </div>
+                    {errors.address && <div className="error-message">{errors.address}</div>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="phone">Telefone</label>
+                    <input
+                      type="text"
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className={errors.phone ? 'error' : ''}
+                    />
+                    {errors.phone && <div className="error-message">{errors.phone}</div>}
+                  </div>
+                </div>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="website">Website</label>
+                    <div className="input-icon">
+                      <FaGlobe className="input-icon" />
+                      <input
+                        type="url"
+                        id="website"
+                        value={formData.website}
+                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                        className={errors.website ? 'error' : ''}
+                      />
+                    </div>
+                    {errors.website && <div className="error-message">{errors.website}</div>}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="price_range">Faixa de Preço</label>
+                    <select
+                      id="price_range"
+                      value={formData.price_range}
+                      onChange={(e) => setFormData({ ...formData, price_range: e.target.value })}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="1">$ - Econômico</option>
+                      <option value="2">$$ - Moderado</option>
+                      <option value="3">$$$ - Alto</option>
+                      <option value="4">$$$$ - Premium</option>
+                    </select>
+                  </div>
+                </div>
+                
                 <div className="form-group">
-                  <label htmlFor="source_id">ID da Fonte</label>
-                  <input
-                    type="text"
-                    id="source_id"
-                    name="source_id"
-                    value={formData.source_id}
-                    onChange={handleInputChange}
-                    placeholder="ID original da fonte"
+                  <label htmlFor="description">Descrição</label>
+                  <textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows="4"
                   />
+                </div>
+              </div>
+              
+              {/* Informações da Fonte */}
+              {restaurant && (restaurant.source_type || restaurant.source_id) && (
+                <div className={`source-info ${restaurant.source_type || 'manual'}`}>
+                  <span className="source-icon">
+                    {restaurant.source_type === 'osm' ? '🗺️' : 
+                     restaurant.source_type === 'google' ? '🔍' : '✏️'}
+                  </span>
+                  <span>
+                    Fonte: {restaurant.source_type === 'osm' ? 'OpenStreetMap' : 
+                            restaurant.source_type === 'google' ? 'Google Places' : 'Manual'}
+                  </span>
+                  {restaurant.source_id && (
+                    <span className="source-id">ID: {restaurant.source_id}</span>
+                  )}
                 </div>
               )}
-            </div>
-
-            {renderSourceInfo()}
-          </div>
-
-          {/* Imagens */}
-          <div className="form-section">
-            <h3>🖼️ Imagens</h3>
-            
-            <div className="images-grid">
-              <div className="image-upload-group">
-                <label>Foto Principal</label>
-                <div className="image-upload-area">
-                  {imagePreview.main_photo ? (
-                    <img 
-                      src={imagePreview.main_photo} 
-                      alt="Foto principal" 
-                      className="image-preview"
-                    />
+              
+              {/* Botões de Ação */}
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  <FaTimes />
+                  Cancelar
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="spinner"></div>
+                      Salvando...
+                    </>
                   ) : (
-                    <div className="upload-placeholder">
-                      <FaImage />
-                      <span>Nenhuma foto</span>
-                    </div>
+                    <>
+                      <FaSave />
+                      Salvar Alterações
+                    </>
                   )}
-                  
-                  <ImageUpload
-                    onUploadSuccess={(imageUrl) => {
-                      setImagePreview(prev => ({ ...prev, main_photo: imageUrl }));
-                      setImages(prev => ({ ...prev, main_photo: imageUrl }));
-                    }}
-                    onUploadError={(error) => {
-                      setErrors(prev => ({ ...prev, main_photo: error }));
-                    }}
-                    type="main_photo"
-                    currentImage={imagePreview.main_photo}
-                    className="upload-button"
-                    restaurantId={restaurant.id}
-                    axiosInstance={restaurantAxios}
-                  />
-                </div>
-                {errors.main_photo && <span className="error-message">{errors.main_photo}</span>}
-              </div>
-
-              <div className="image-upload-group">
-                <label>Logo</label>
-                <div className="image-upload-area">
-                  {imagePreview.logo ? (
-                    <img 
-                      src={imagePreview.logo} 
-                      alt="Logo" 
-                      className="image-preview"
-                    />
-                  ) : (
-                    <div className="upload-placeholder">
-                      <FaImage />
-                      <span>Nenhum logo</span>
-                    </div>
-                  )}
-                  
-                  <ImageUpload
-                    onUploadSuccess={(imageUrl) => {
-                      setImagePreview(prev => ({ ...prev, logo: imageUrl }));
-                      setImages(prev => ({ ...prev, logo: imageUrl }));
-                    }}
-                    onUploadError={(error) => {
-                      setErrors(prev => ({ ...prev, logo: error }));
-                    }}
-                    type="logo"
-                    currentImage={imagePreview.logo}
-                    className="upload-button"
-                    restaurantId={restaurant.id}
-                    axiosInstance={restaurantAxios}
-                  />
-                </div>
-                {errors.logo && <span className="error-message">{errors.logo}</span>}
+                </button>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Erro Geral */}
-          {errors.general && (
-            <div className="error-message general-error">
-              {errors.general}
-            </div>
-          )}
-
-          {/* Botões de Ação */}
-          <div className="modal-actions">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-              disabled={loading}
-            >
-              <FaTimes />
-              Cancelar
-            </button>
-            
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="spinner"></div>
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <FaSave />
-                  Salvar Alterações
-                </>
-              )}
-            </button>
+        {activeTab === 'photos' && (
+          <div className="tab-content">
+            <RestaurantPhotoManager
+              restaurant={restaurant}
+              onPhotosUpdated={handlePhotosUpdated}
+              onClose={onClose}
+            />
           </div>
-        </form>
+        )}
+
+        {activeTab === 'services' && (
+          <div className="tab-content">
+            <RestaurantServicesTab
+              restaurant={restaurant}
+              onServicesUpdated={(services) => {
+                console.log('Serviços atualizados:', services);
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'highlights' && (
+          <div className="tab-content">
+            <RestaurantHighlightsTab
+              restaurant={restaurant}
+              onHighlightsUpdated={(highlights) => {
+                console.log('Highlights atualizados:', highlights);
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'operating-hours' && (
+          <div className="tab-content">
+            <RestaurantOperatingHoursTab
+              restaurant={restaurant}
+              onOperatingHoursUpdated={(operatingHours) => {
+                console.log('Horários atualizados:', operatingHours);
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

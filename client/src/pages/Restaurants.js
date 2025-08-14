@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaStar, FaSearch, FaFilter, FaMapMarkerAlt, FaUtensils, FaPhone } from 'react-icons/fa';
+import { FaStar, FaSearch, FaMapMarkerAlt, FaFilter } from 'react-icons/fa';
 import axios from 'axios';
 import './Restaurants.css';
 
@@ -25,7 +25,7 @@ const Restaurants = () => {
   const currentRestaurants = filteredRestaurants.slice(indexOfFirstRestaurant, indexOfLastRestaurant);
 
   // Função para buscar restaurantes da API
-  const fetchRestaurants = async (search = '', page = 1) => {
+  const fetchRestaurants = useCallback(async (search = '', page = 1) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -53,7 +53,7 @@ const Restaurants = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantsPerPage]);
 
   // Função para buscar restaurantes
   const handleSearch = (e) => {
@@ -180,27 +180,7 @@ const Restaurants = () => {
     return pageNumbers;
   };
 
-  // Função para renderizar estrelas
-  const renderStars = (rating) => {
-    if (!rating || rating === 0) {
-      return <span className="no-rating">Sem avaliação</span>;
-    }
-
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < 5; i++) {
-      if (i < fullStars) {
-        stars.push(<FaStar key={i} className="star filled" />);
-      } else if (i === fullStars && hasHalfStar) {
-        stars.push(<FaStar key={i} className="star half-filled" />);
-      } else {
-        stars.push(<FaStar key={i} className="star" />);
-      }
-    }
-    return stars;
-  };
+  // renderStars removido pois não estava sendo utilizado
 
   // Função para renderizar faixa de preço
   const renderPriceRange = (price) => {
@@ -218,7 +198,7 @@ const Restaurants = () => {
   // Carregar restaurantes ao montar o componente
   useEffect(() => {
     fetchRestaurants();
-  }, []);
+  }, [fetchRestaurants]);
 
   if (loading) {
     return (

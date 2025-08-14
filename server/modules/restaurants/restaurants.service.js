@@ -91,11 +91,17 @@ class RestaurantsService {
     
     const restaurant = result.rows[0];
     console.log('✅ Restaurante encontrado:', restaurant.name);
+    console.log('🔍 Dados do restaurante antes das fotos:', {
+      id: restaurant.id,
+      name: restaurant.name,
+      description: restaurant.description,
+      address: restaurant.address
+    });
     
     // Buscar fotos do restaurante
     console.log('🔍 Buscando fotos...');
     const photosResult = await pool.query(
-      `SELECT id, photo_url, photo_order, is_main, caption, created_at
+      `SELECT id, photo_url, photo_order, caption, created_at
        FROM restaurant_photos 
        WHERE restaurant_id = $1 
        ORDER BY photo_order ASC, created_at ASC`,
@@ -106,10 +112,16 @@ class RestaurantsService {
     console.log('📸 Dados das fotos:', photosResult.rows);
     
     restaurant.photos = photosResult.rows;
-    restaurant.main_photo = photosResult.rows.find(photo => photo.is_main) || photosResult.rows[0] || null;
+    restaurant.main_photo = photosResult.rows[0] || null;
     
     console.log('✅ Fotos atribuídas ao restaurante:', restaurant.photos ? restaurant.photos.length : 'undefined');
     console.log('✅ Main photo:', restaurant.main_photo ? restaurant.main_photo.photo_url : 'undefined');
+    console.log('🔍 Estrutura final do restaurante:', {
+      id: restaurant.id,
+      name: restaurant.name,
+      photos_count: restaurant.photos ? restaurant.photos.length : 'undefined',
+      photos_structure: restaurant.photos ? restaurant.photos.map(p => ({ id: p.id, photo_url: p.photo_url, photo_order: p.photo_order })) : 'undefined'
+    });
     
     return restaurant;
   }

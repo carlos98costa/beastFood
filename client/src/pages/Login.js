@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
+import GoogleLogin from '../components/GoogleLogin';
 import './Login.css';
 
 function Login() {
@@ -82,6 +83,22 @@ function Login() {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <div className="login-divider">
+          <span>ou</span>
+        </div>
+
+        <GoogleLogin
+          onSuccess={(user) => {
+            toast.success(`Bem-vindo, ${user.name}!`);
+            navigate('/');
+          }}
+          onError={(error) => {
+            toast.error(error);
+          }}
+          buttonText="Entrar com Google"
+          className="google-login-full"
+        />
 
         <div className="login-footer">
           <p>

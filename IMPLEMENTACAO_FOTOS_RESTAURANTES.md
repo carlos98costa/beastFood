@@ -254,3 +254,4 @@ O sistema de fotos dos restaurantes foi **completamente implementado e está fun
 **Versão**: 2.3
 
 **Tempo de Implementação**: ✅ **Concluído em uma sessão**
+

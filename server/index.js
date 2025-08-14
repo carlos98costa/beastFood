@@ -27,6 +27,7 @@ const adminRoutes = require('./modules/admin/admin.routes');
 const restaurantOwnerRoutes = require('./modules/restaurant-owner/restaurant-owner.routes');
 const restaurantRoutes = require('./routes/restaurants');
 const restaurantPhotosRoutes = require('./modules/restaurants/restaurant-photos.routes');
+const restaurantFeaturesRoutes = require('./modules/restaurants/restaurant-features.routes');
 const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const likeRoutes = require('./routes/likes');
@@ -118,6 +119,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/restaurant-owner', restaurantOwnerRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/restaurant-photos', restaurantPhotosRoutes);
+app.use('/api/restaurant-features', restaurantFeaturesRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
@@ -185,6 +187,7 @@ app.use('*', (req, res) => {
       '/api/restaurant-owner',
       '/api/restaurants',
       '/api/restaurant-photos',
+      '/api/restaurant-features',
       '/api/posts',
       '/api/comments',
       '/api/likes',

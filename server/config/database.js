@@ -21,6 +21,8 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   // Configuração de timezone para UTC-3 (Brasília)
   options: '-c timezone=America/Sao_Paulo',
+  // Configurações de encoding para UTF-8
+  client_encoding: 'UTF8',
   // Otimizações de performance
   statement_timeout: 10000, // 10 segundos
   query_timeout: 10000, // 10 segundos

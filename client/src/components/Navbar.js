@@ -8,7 +8,7 @@ import './Navbar.css';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const location = useLocation();
+  // location removido pois não estava sendo utilizado
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -56,7 +56,7 @@ const Navbar = () => {
     navigate(`/profile/${user.username}`);
   };
 
-  const isActive = (path) => location.pathname === path;
+  // isActive removido pois não estava sendo utilizado
 
   return (
     <nav className="navbar">

@@ -183,3 +183,4 @@ O painel administrativo foi **completamente implementado e está funcionando per
 *Sistema BeastFood - Painel Administrativo Funcionando*
 *Data: 14 de Agosto de 2025*
 *Versão: 2.3*
+

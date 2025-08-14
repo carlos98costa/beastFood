@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import CreatePostModal from '../components/CreatePostModal';
@@ -7,7 +7,7 @@ import './CreatePost.css';
 function CreatePost() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(true);
+  // isModalOpen removido pois não estava sendo utilizado
 
   const handlePostCreated = (newPost) => {
     // Redirecionar para a página inicial após criar o post
@@ -27,7 +27,7 @@ function CreatePost() {
   return (
     <div className="create-post-page">
       <CreatePostModal
-        isOpen={isModalOpen}
+        isOpen={true}
         onClose={handleClose}
         onPostCreated={handlePostCreated}
       />

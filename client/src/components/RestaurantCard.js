@@ -14,12 +14,42 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
     phone = "(16) 99999-9999",
     description = "Descrição do restaurante com pratos especiais e ambiente acolhedor",
     serviceOptions = ["Buffet à vontade", "Delivery", "Reservas"],
-    highlights = ["Ótimos coquetéis", "Opções vegetarianas", "Ambiente familiar"],
+    highlights = [], // Removido valor padrão hardcoded
     status = "Fechado",
     nextOpen = "Abre às 11:00",
     photos = [],
     isFavorite = false
   } = restaurant || {};
+
+  // Debug: log das fotos recebidas
+  console.log('🔍 RestaurantCard - photos recebidas:', photos);
+  console.log('🔍 RestaurantCard - primeira foto:', photos[0]);
+  console.log('🔍 RestaurantCard - tipo da primeira foto:', typeof photos[0]);
+
+  // Função para mapear tipos de serviço para nomes legíveis
+  const getServiceLabel = (serviceType) => {
+    const labels = {
+      delivery: 'Delivery',
+      reservas: 'Reservas',
+      takeaway: 'Takeaway',
+      dine_in: 'Comer no local',
+      rodizio: 'Rodízio',
+      buffet: 'Buffet',
+      a_la_cart: 'À la carte',
+      self_service: 'Self-service',
+      drive_thru: 'Drive-thru',
+      catering: 'Catering'
+    };
+    return labels[serviceType] || serviceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Função para construir URL completa das fotos
+  const getPhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+    if (photoPath.startsWith('http')) return photoPath;
+    // Garantir que a URL seja construída corretamente
+    return `http://localhost:5000${photoPath}`;
+  };
 
   const renderStars = (rating) => {
     const stars = [];
@@ -119,9 +149,13 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
               title="Clique para ampliar"
             >
               <img 
-                src={photos[0] || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center"} 
+                src={getPhotoUrl(photos[0]) || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center"} 
                 alt={name}
                 className="restaurant-image"
+                onError={(e) => {
+                  console.error('❌ Erro ao carregar foto principal:', photos[0]);
+                  e.target.src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop&crop=center";
+                }}
               />
               <div className="photo-badge main">Principal ⭐</div>
               <div className="photo-count">{photos.length || 1} foto</div>
@@ -145,7 +179,7 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
                 <h4>Opções de serviço:</h4>
                 <ul>
                   {serviceOptions.map((option, index) => (
-                    <li key={index}>{option}</li>
+                    <li key={index}>{getServiceLabel(option)}</li>
                   ))}
                 </ul>
               </div>
@@ -220,9 +254,13 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
             
             <div className="modal-photo-container">
               <img 
-                src={photos[currentPhotoIndex] || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=600&fit=crop&crop=center"} 
+                src={getPhotoUrl(photos[currentPhotoIndex]) || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=600&fit=crop&crop=center"} 
                 alt={`${name} - Foto ${currentPhotoIndex + 1}`}
                 className="modal-photo"
+                onError={(e) => {
+                  console.error('❌ Erro ao carregar foto:', photos[currentPhotoIndex]);
+                  e.target.src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=600&fit=crop&crop=center";
+                }}
               />
             </div>
             

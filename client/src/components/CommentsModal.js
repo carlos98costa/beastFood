@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { FaChevronLeft, FaChevronRight, FaHeart, FaRegHeart, FaReply, FaTrash, FaEdit } from 'react-icons/fa';
 import './CommentsModal.css';
@@ -37,38 +37,8 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
     };
   }, [isOpen, onClose]);
 
-  // Limpar estados quando modal abre
-  useEffect(() => {
-    if (isOpen) {
-      setNewComment('');
-      setCurrentPhotoIndex(0);
-      setReplyingTo(null);
-      setReplyContent('');
-      setEditingComment(null);
-      setEditContent('');
-      fetchComments();
-    }
-  }, [isOpen, post?.id]);
-
-  // Fechar modal ao clicar fora
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  // Navegar entre fotos
-  const handlePhotoNavigation = (direction) => {
-    if (!post.photos) return;
-    
-    const newIndex = currentPhotoIndex + direction;
-    if (newIndex >= 0 && newIndex < post.photos.length) {
-      setCurrentPhotoIndex(newIndex);
-    }
-  };
-
   // Buscar comentários
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     if (!post?.id) return;
     
     try {
@@ -87,6 +57,36 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
       console.error('Erro ao buscar comentários:', error);
     } finally {
       setLoadingComments(false);
+    }
+  }, [post?.id, token]);
+
+  // Limpar estados quando modal abre
+  useEffect(() => {
+    if (isOpen) {
+      setNewComment('');
+      setCurrentPhotoIndex(0);
+      setReplyingTo(null);
+      setReplyContent('');
+      setEditingComment(null);
+      setEditContent('');
+      fetchComments();
+    }
+  }, [isOpen, post?.id, fetchComments]);
+
+  // Fechar modal ao clicar fora
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  // Navegar entre fotos
+  const handlePhotoNavigation = (direction) => {
+    if (!post.photos) return;
+    
+    const newIndex = currentPhotoIndex + direction;
+    if (newIndex >= 0 && newIndex < post.photos.length) {
+      setCurrentPhotoIndex(newIndex);
     }
   };
 

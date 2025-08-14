@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaMapMarkerAlt, FaStar, FaHeart, FaRegHeart, FaComment, FaUtensils, FaEdit, FaTrash } from 'react-icons/fa';
@@ -20,27 +20,8 @@ const Home = () => {
   const [commentingPost, setCommentingPost] = useState(null);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (user && token) {
-      fetchPosts();
-    }
-  }, [user, token]);
-
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
-  // Detectar novos posts criados
-  useEffect(() => {
-    if (location.state?.newPost) {
-      // Adicionar o novo post no início da lista
-      setPosts(prevPosts => [location.state.newPost, ...prevPosts]);
-      // Limpar o state para evitar duplicação
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
-
-  const fetchPosts = async () => {
+  // Declarar funções antes dos useEffect
+  const fetchPosts = useCallback(async () => {
     try {
       // Usar o token do contexto de autenticação
       if (!token) {
@@ -58,9 +39,9 @@ const Home = () => {
         // Se falhar, o usuário será redirecionado para login
       }
     }
-  };
+  }, [token]);
 
-  const fetchRestaurants = async () => {
+  const fetchRestaurants = useCallback(async () => {
     try {
       const response = await axios.get('/api/restaurants?limit=6');
       setRestaurants(response.data.restaurants || []);
@@ -70,7 +51,27 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user && token) {
+      fetchPosts();
+    }
+  }, [user, token, fetchPosts]);
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, [fetchRestaurants]);
+
+  // Detectar novos posts criados
+  useEffect(() => {
+    if (location.state?.newPost) {
+      // Adicionar o novo post no início da lista
+      setPosts(prevPosts => [location.state.newPost, ...prevPosts]);
+      // Limpar o state para evitar duplicação
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleLike = async (postId) => {
     if (!user || !token) return;

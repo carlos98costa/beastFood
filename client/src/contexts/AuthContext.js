@@ -306,7 +306,7 @@ export function AuthProvider({ children }) {
         clearInterval(tokenCheckInterval.current);
       }
     };
-  }, []); // Remover todas as dependências para executar apenas uma vez
+  }, []); // Executar apenas uma vez na inicialização
 
   // useEffect adicional para garantir que loading seja false quando não há token
   useEffect(() => {
@@ -423,6 +423,24 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loginWithGoogle = async (user, accessToken) => {
+    try {
+      setUser(user);
+      setToken(accessToken);
+      setLoading(false);
+      localStorage.setItem('token', accessToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Erro no login Google:', error);
+      return { 
+        success: false, 
+        error: 'Erro no login com Google' 
+      };
+    }
+  };
+
   const register = async (userData) => {
     try {
       const response = await axios.post('/api/auth/register', userData);
@@ -462,6 +480,7 @@ export function AuthProvider({ children }) {
     loading,
     token,
     login,
+    loginWithGoogle,
     register,
     logout,
     updateProfile,

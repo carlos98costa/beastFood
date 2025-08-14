@@ -90,6 +90,34 @@
   cursor: not-allowed;
 }
 
+.login-divider {
+  text-align: center;
+  margin: 20px 0;
+  position: relative;
+}
+
+.login-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e1e5e9;
+}
+
+.login-divider span {
+  background: white;
+  padding: 0 15px;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.google-login-full {
+  margin-bottom: 20px;
+}
+
 .login-footer {
   text-align: center;
   padding-top: 20px;

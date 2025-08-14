@@ -216,3 +216,4 @@ const RestaurantPhotoGallery = ({ photos = [], restaurantName = '', onClose, isO
 };
 
 export default RestaurantPhotoGallery;
+

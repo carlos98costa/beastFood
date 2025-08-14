@@ -20,7 +20,7 @@ const ImageUpload = ({
 
   // Determinar imagem padrão baseada no tipo
   const defaultImage = type === 'avatar' ? defaultAvatar : defaultCover;
-  const displayImage = currentImage || defaultImage;
+  // displayImage removido pois não estava sendo utilizado
 
   const handleFileSelect = (file) => {
     if (!file) return;

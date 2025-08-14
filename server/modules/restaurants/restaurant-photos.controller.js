@@ -10,7 +10,7 @@ class RestaurantPhotosController {
       
       res.json({
         success: true,
-        data: photos,
+        photos: photos,
         count: photos.length
       });
     } catch (error) {
@@ -22,37 +22,13 @@ class RestaurantPhotosController {
     }
   }
 
-  // Buscar foto principal de um restaurante
-  async getMainPhoto(req, res) {
-    try {
-      const { restaurantId } = req.params;
-      const photo = await restaurantPhotosService.getMainPhoto(restaurantId);
-      
-      if (!photo) {
-        return res.status(404).json({
-          success: false,
-          error: 'Foto principal não encontrada'
-        });
-      }
-      
-      res.json({
-        success: true,
-        data: photo
-      });
-    } catch (error) {
-      console.error('Erro ao buscar foto principal:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erro interno do servidor'
-      });
-    }
-  }
+
 
   // Adicionar nova foto ao restaurante
   async addPhoto(req, res) {
     try {
       const { restaurantId } = req.params;
-      const { caption, is_main } = req.body;
+      const { caption } = req.body;
       
       // Verificar se há arquivo enviado
       if (!req.file) {
@@ -64,8 +40,7 @@ class RestaurantPhotosController {
       
       const photoData = {
         photo_url: `/uploads/${req.file.filename}`,
-        caption: caption || '',
-        is_main: is_main === 'true' || is_main === true
+        caption: caption || ''
       };
       
       const newPhoto = await restaurantPhotosService.addPhoto(restaurantId, photoData);
@@ -151,14 +126,19 @@ class RestaurantPhotosController {
       const { restaurantId } = req.params;
       const { photoOrder } = req.body;
       
+      console.log('🔍 Reordenar fotos - Dados recebidos:', { restaurantId, photoOrder });
+      
       if (!Array.isArray(photoOrder)) {
+        console.log('❌ photoOrder não é um array:', typeof photoOrder, photoOrder);
         return res.status(400).json({
           success: false,
           error: 'Ordem das fotos deve ser um array'
         });
       }
       
+      console.log('✅ photoOrder é válido, chamando serviço...');
       const reorderedPhotos = await restaurantPhotosService.reorderPhotos(restaurantId, photoOrder);
+      console.log('✅ Fotos reordenadas com sucesso:', reorderedPhotos);
       
       res.json({
         success: true,
@@ -166,7 +146,8 @@ class RestaurantPhotosController {
         data: reorderedPhotos
       });
     } catch (error) {
-      console.error('Erro ao reordenar fotos:', error);
+      console.error('❌ Erro ao reordenar fotos:', error);
+      console.error('❌ Stack trace:', error.stack);
       res.status(500).json({
         success: false,
         error: 'Erro interno do servidor'
@@ -174,25 +155,7 @@ class RestaurantPhotosController {
     }
   }
 
-  // Definir foto como principal
-  async setMainPhoto(req, res) {
-    try {
-      const { photoId } = req.params;
-      const mainPhoto = await restaurantPhotosService.setMainPhoto(photoId);
-      
-      res.json({
-        success: true,
-        message: 'Foto definida como principal com sucesso',
-        data: mainPhoto
-      });
-    } catch (error) {
-      console.error('Erro ao definir foto principal:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Erro interno do servidor'
-      });
-    }
-  }
+
 
   // Contar fotos de um restaurante
   async getPhotoCount(req, res) {
@@ -232,11 +195,10 @@ class RestaurantPhotosController {
         const file = req.files[i];
         const caption = captions && captions[i] ? captions[i] : '';
         
-        const photoData = {
-          photo_url: `/uploads/${file.filename}`,
-          caption,
-          is_main: i === 0 // Primeira foto será a principal
-        };
+                 const photoData = {
+           photo_url: `/uploads/${file.filename}`,
+           caption
+         };
         
         const newPhoto = await restaurantPhotosService.addPhoto(restaurantId, photoData);
         uploadedPhotos.push(newPhoto);
@@ -258,3 +220,4 @@ class RestaurantPhotosController {
 }
 
 module.exports = new RestaurantPhotosController();
+

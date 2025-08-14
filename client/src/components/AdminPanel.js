@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { FaUsers, FaUtensils, FaChartBar, FaCrown, FaEdit, FaTrash, FaUserPlus, FaUserMinus } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FaUsers, FaUtensils, FaChartBar, FaCrown, FaEdit, FaUserPlus, FaUserMinus } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import EditRestaurantModal from './EditRestaurantModal';
 import './AdminPanel.css';
 
 const AdminPanel = ({ onClose }) => {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('stats');
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -14,7 +14,7 @@ const AdminPanel = ({ onClose }) => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [showUserModal, setShowUserModal] = useState(false);
+  // Modal de usuário removido pois não estava sendo utilizado
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showEditRestaurantModal, setShowEditRestaurantModal] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState(null);
@@ -32,15 +32,15 @@ const AdminPanel = ({ onClose }) => {
     if (token) {
       adminAxios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
-  }, [token]);
+  }, [token, adminAxios.defaults.headers.common]);
 
   useEffect(() => {
     if (token) {
       fetchData();
     }
-  }, [token]);
+  }, [token, fetchData]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -74,7 +74,7 @@ const AdminPanel = ({ onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, adminAxios]);
 
   const updateUserRole = async (userId, newRole) => {
     try {

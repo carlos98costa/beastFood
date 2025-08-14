@@ -9,7 +9,7 @@ import CreatePostModal from '../components/CreatePostModal';
 import EditPostModal from '../components/EditPostModal';
 import CommentsModal from '../components/CommentsModal';
 import FollowButton from '../components/FollowButton';
-import defaultAvatar from '../assets/default-avatar.svg';
+// defaultAvatar removido pois não estava sendo utilizado
 import defaultCover from '../assets/default-cover.svg';
 import './Profile.css';
 
