@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Busca - BeastFood</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .search-button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .search-button:hover {
+            background: #5a6fd8;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .tab {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Busca - BeastFood</h1>
+    
+    <div class="test-section">
+        <h2>🔍 Teste da API de Busca</h2>
+        <p>Teste a funcionalidade de busca da API:</p>
+        
+        <div class="search-form">
+            <input type="text" id="searchInput" class="search-input" placeholder="Digite um termo para buscar..." value="italiano">
+            <button onclick="performSearch()" class="search-button">Buscar</button>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="setSearchType('all')">Todos</button>
+            <button class="tab" onclick="setSearchType('restaurants')">Restaurantes</button>
+            <button class="tab" onclick="setSearchType('users')">Usuários</button>
+        </div>
+        
+        <div id="results" class="results">
+            Clique em "Buscar" para testar a funcionalidade...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Exemplos de Busca</h2>
+        <ul>
+            <li><strong>Restaurantes:</strong> "italiano", "churrasco", "sushi"</li>
+            <li><strong>Usuários:</strong> "joão", "maria", "pedro"</li>
+            <li><strong>Endereços:</strong> "paulista", "augusta", "flores"</li>
+        </ul>
+    </div>
+
+    <script>
+        let currentSearchType = 'all';
+        
+        function setSearchType(type) {
+            currentSearchType = type;
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            if (!query) {
+                resultsDiv.textContent = 'Por favor, digite um termo para buscar.';
+                return;
+            }
+            
+            resultsDiv.textContent = 'Buscando...';
+            
+            try {
+                const params = new URLSearchParams({
+                    q: query,
+                    type: currentSearchType,
+                    page: 1,
+                    limit: 20
+                });
+                
+                const response = await fetch(`http://localhost:5000/api/search?${params}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Formatar os resultados
+                let formattedResults = `🔍 Resultados para: "${query}"\n`;
+                formattedResults += `📊 Total de resultados: ${data.searchInfo.totalResults}\n\n`;
+                
+                if (data.restaurants && data.restaurants.items.length > 0) {
+                    formattedResults += `🍽️ RESTAURANTES (${data.restaurants.pagination.total}):\n`;
+                    formattedResults += `─`.repeat(50) + '\n';
+                    data.restaurants.items.forEach((restaurant, index) => {
+                        formattedResults += `${index + 1}. ${restaurant.name}\n`;
+                        formattedResults += `   📍 ${restaurant.address || 'Endereço não informado'}\n`;
+                        formattedResults += `   📝 ${restaurant.description || 'Sem descrição'}\n`;
+                        formattedResults += `   ⭐ ${restaurant.average_rating ? restaurant.average_rating.toFixed(1) : 'Sem avaliações'}\n`;
+                        formattedResults += `   📊 ${restaurant.posts_count || 0} posts, ${restaurant.favorites_count || 0} favoritos\n`;
+                        formattedResults += `   👤 Criado por: ${restaurant.created_by_username}\n\n`;
+                    });
+                }
+                
+                if (data.users && data.users.items.length > 0) {
+                    formattedResults += `👥 USUÁRIOS (${data.users.pagination.total}):\n`;
+                    formattedResults += `─`.repeat(50) + '\n';
+                    data.users.items.forEach((user, index) => {
+                        formattedResults += `${index + 1}. ${user.name} (@${user.username})\n`;
+                        formattedResults += `   📝 ${user.bio || 'Sem bio'}\n`;
+                        formattedResults += `   👥 ${user.followers_count || 0} seguidores, ${user.following_count || 0} seguindo\n`;
+                        formattedResults += `   📊 ${user.posts_count || 0} posts\n\n`;
+                    });
+                }
+                
+                if ((!data.restaurants || data.restaurants.items.length === 0) && 
+                    (!data.users || data.users.items.length === 0)) {
+                    formattedResults += '❌ Nenhum resultado encontrado.\n';
+                    formattedResults += 'Tente usar termos diferentes ou verificar a ortografia.';
+                }
+                
+                resultsDiv.textContent = formattedResults;
+                
+            } catch (error) {
+                resultsDiv.textContent = `❌ Erro na busca: ${error.message}`;
+                console.error('Erro:', error);
+            }
+        }
+        
+        // Buscar automaticamente ao carregar a página
+        window.onload = function() {
+            setTimeout(performSearch, 1000);
+        };
+    </script>
+</body>
+</html>

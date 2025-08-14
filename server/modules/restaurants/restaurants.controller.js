@@ -11,10 +11,6 @@ class RestaurantsController {
         return res.status(400).json({ error: 'Nome do restaurante deve ter pelo menos 2 caracteres' });
       }
 
-      if (restaurantData.price_range && (restaurantData.price_range < 1 || restaurantData.price_range > 5)) {
-        return res.status(400).json({ error: 'Faixa de preço deve estar entre 1 e 5' });
-      }
-
       const newRestaurant = await restaurantsService.createRestaurant(restaurantData);
 
       res.status(201).json({
@@ -31,9 +27,22 @@ class RestaurantsController {
   // Buscar restaurante por ID
   async getRestaurant(req, res) {
     try {
+      console.log('🚀 getRestaurant INICIADO');
       const { id } = req.params;
+      const { includePhotos = 'true' } = req.query;
 
-      const restaurant = await restaurantsService.findRestaurantById(id);
+      console.log('🔍 getRestaurant chamado para ID:', id);
+      console.log('🔍 includePhotos:', includePhotos);
+
+      let restaurant;
+      if (includePhotos === 'true') {
+        console.log('🔍 Chamando findRestaurantByIdWithPhotos...');
+        restaurant = await restaurantsService.findRestaurantByIdWithPhotos(id);
+      } else {
+        console.log('🔍 Chamando findRestaurantById...');
+        restaurant = await restaurantsService.findRestaurantById(id);
+      }
+
       if (!restaurant) {
         return res.status(404).json({ error: 'Restaurante não encontrado' });
       }
@@ -49,19 +58,38 @@ class RestaurantsController {
   // Buscar todos os restaurantes
   async getAllRestaurants(req, res) {
     try {
-      const { limit = 20, offset = 0, cuisine_type, price_range } = req.query;
+      const { limit = 20, page = 1, sort_by } = req.query;
+      
+      const limitNum = parseInt(limit);
+      const pageNum = parseInt(page);
+      const offset = (pageNum - 1) * limitNum;
       
       const filters = {};
-      if (cuisine_type) filters.cuisine_type = cuisine_type;
-      if (price_range) filters.price_range = parseInt(price_range);
+      if (sort_by) filters.sort_by = sort_by;
 
-      const restaurants = await restaurantsService.getAllRestaurants(
-        parseInt(limit), 
-        parseInt(offset), 
-        filters
-      );
+      const [restaurants, total] = await Promise.all([
+        restaurantsService.getAllRestaurants(
+          limitNum, 
+          offset, 
+          filters
+        ),
+        restaurantsService.getTotalRestaurants(filters)
+      ]);
 
-      res.json({ restaurants });
+      const totalPages = Math.ceil(total / limitNum);
+
+      res.json({ 
+        restaurants, 
+        total,
+        pagination: {
+          current: pageNum,
+          total: total,
+          pages: totalPages,
+          limit: limitNum,
+          hasNext: pageNum < totalPages,
+          hasPrev: pageNum > 1
+        }
+      });
 
     } catch (error) {
       console.error('Erro ao buscar restaurantes:', error);
@@ -128,15 +156,7 @@ class RestaurantsController {
 
       // Validações básicas
       if (updateData.name && updateData.name.trim().length < 2) {
-        return res.status(400).json({ 
-          error: 'Nome do restaurante deve ter pelo menos 2 caracteres' 
-        });
-      }
-
-      if (updateData.price_range && (updateData.price_range < 1 || updateData.price_range > 5)) {
-        return res.status(400).json({ 
-          error: 'Faixa de preço deve estar entre 1 e 5' 
-        });
+        return res.status(400).json({ error: 'Nome do restaurante deve ter pelo menos 2 caracteres' });
       }
 
       const updatedRestaurant = await restaurantsService.updateRestaurant(id, updateData);
@@ -247,6 +267,22 @@ class RestaurantsController {
 
     } catch (error) {
       console.error('Erro ao adicionar aos favoritos:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  // Verificar se restaurante é favorito
+  async checkIfFavorite(req, res) {
+    try {
+      const userId = req.user.id;
+      const { id: restaurantId } = req.params;
+
+      const isFavorite = await restaurantsService.isUserFavorite(userId, restaurantId);
+
+      res.json({ isFavorite });
+
+    } catch (error) {
+      console.error('Erro ao verificar favorito:', error);
       res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }

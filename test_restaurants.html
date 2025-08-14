@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API Restaurantes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste da API de Restaurantes</h1>
+    
+    <div class="test-section">
+        <h3>Buscar Todos os Restaurantes</h3>
+        <button onclick="testGetAllRestaurants()">Buscar Restaurantes</button>
+        <button onclick="testGetAllRestaurantsWithFilters()">Com Filtros</button>
+        <button onclick="testGetAllRestaurantsWithSort()">Com Ordenação</button>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Buscar Restaurante por ID</h3>
+        <input type="number" id="restaurantId" placeholder="ID do restaurante" value="1">
+        <button onclick="testGetRestaurantById()">Buscar por ID</button>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Buscar Restaurantes por Termo</h3>
+        <input type="text" id="searchTerm" placeholder="Termo de busca" value="italiano">
+        <button onclick="testSearchRestaurants()">Buscar</button>
+        <div id="result3"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                throw error;
+            }
+        }
+
+        function displayResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `
+                <h4 class="${isError ? 'error' : 'success'}">
+                    ${isError ? 'Erro' : 'Sucesso'}
+                </h4>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        async function testGetAllRestaurants() {
+            try {
+                const result = await makeRequest('/restaurants?limit=5');
+                displayResult('result1', result);
+            } catch (error) {
+                displayResult('result1', { error: error.message }, true);
+            }
+        }
+
+        async function testGetAllRestaurantsWithFilters() {
+            try {
+                const result = await makeRequest('/restaurants?limit=5&cuisine_type=Italiana&price_range=3');
+                displayResult('result1', result);
+            } catch (error) {
+                displayResult('result1', { error: error.message }, true);
+            }
+        }
+
+        async function testGetAllRestaurantsWithSort() {
+            try {
+                const result = await makeRequest('/restaurants?limit=5&sort_by=rating');
+                displayResult('result1', result);
+            } catch (error) {
+                displayResult('result1', { error: error.message }, true);
+            }
+        }
+
+        async function testGetRestaurantById() {
+            try {
+                const id = document.getElementById('restaurantId').value;
+                const result = await makeRequest(`/restaurants/${id}`);
+                displayResult('result2', result);
+            } catch (error) {
+                displayResult('result2', { error: error.message }, true);
+            }
+        }
+
+        async function testSearchRestaurants() {
+            try {
+                const term = document.getElementById('searchTerm').value;
+                const result = await makeRequest(`/restaurants/search?q=${encodeURIComponent(term)}&limit=5`);
+                displayResult('result3', result);
+            } catch (error) {
+                displayResult('result3', { error: error.message }, true);
+            }
+        }
+
+        // Teste automático ao carregar a página
+        window.onload = function() {
+            console.log('Página carregada. Clique nos botões para testar a API.');
+        };
+    </script>
+</body>
+</html>

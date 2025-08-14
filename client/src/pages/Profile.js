@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { FaEdit, FaTrash, FaHeart, FaRegHeart, FaComment } from 'react-icons/fa';
 import axios from 'axios';
 import ImageUpload from '../components/ImageUpload';
 import EditProfileModal from '../components/EditProfileModal';
 import CreatePostModal from '../components/CreatePostModal';
+import EditPostModal from '../components/EditPostModal';
+import CommentsModal from '../components/CommentsModal';
 import FollowButton from '../components/FollowButton';
 import defaultAvatar from '../assets/default-avatar.svg';
 import defaultCover from '../assets/default-cover.svg';
@@ -21,19 +24,33 @@ function Profile() {
   const [hasMore, setHasMore] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState({});
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [postToComment, setPostToComment] = useState(null);
 
   // Determinar qual usuário mostrar (usuário logado ou usuário específico)
   const targetUsername = username || currentUser?.username;
   const isOwnProfile = !username || username === currentUser?.username;
   const displayUser = profileUser || currentUser;
 
+  // Adicionar estado para controlar se já tentou buscar o perfil
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+
   const fetchUserProfile = useCallback(async () => {
-    if (!targetUsername) return;
+    if (!targetUsername) {
+      console.log('Sem targetUsername, aguardando...');
+      return;
+    }
     
     try {
+      console.log('Buscando perfil para:', targetUsername);
+      setHasAttemptedFetch(true);
+      
       const response = await axios.get(`/api/users/profile/${targetUsername}`);
       setProfileUser(response.data.user);
       setFollowersCount(response.data.user.followers_count || 0);
@@ -53,8 +70,15 @@ function Profile() {
       }
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
-      if (error.response?.status === 404) {
+      setHasAttemptedFetch(true);
+      
+      // Só redirecionar para home se for um erro 404 E não for o próprio perfil
+      if (error.response?.status === 404 && !isOwnProfile) {
+        console.log('Perfil não encontrado, redirecionando para home');
         navigate('/');
+      } else if (error.response?.status === 404 && isOwnProfile) {
+        console.log('Erro 404 no próprio perfil, mas não redirecionando');
+        // Não redirecionar se for o próprio perfil
       }
     }
   }, [targetUsername, navigate, currentUser, isOwnProfile]);
@@ -64,7 +88,9 @@ function Profile() {
     
     try {
       setLoading(true);
-      const response = await axios.get(`/api/users/profile/${targetUsername}/posts?limit=5&offset=${(currentPage - 1) * 5}`);
+      const response = await axios.get(`/api/users/profile/${targetUsername}/posts?limit=5&offset=${(currentPage - 1) * 5}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
       const { posts } = response.data;
       
       if (currentPage === 1) {
@@ -83,11 +109,21 @@ function Profile() {
   }, [targetUsername, currentPage]);
 
   useEffect(() => {
-    if (targetUsername) {
+    console.log('Profile useEffect - targetUsername:', targetUsername, 'currentUser:', currentUser?.username, 'loading:', loading);
+    
+    // Só executar se tivermos um targetUsername e não estivermos já carregando
+    if (targetUsername && !loading && !hasAttemptedFetch) {
+      console.log('Executando fetchUserProfile e fetchUserPosts para:', targetUsername);
       fetchUserProfile();
       fetchUserPosts();
+    } else if (!targetUsername) {
+      console.log('Aguardando targetUsername...');
+    } else if (loading) {
+      console.log('Já carregando, aguardando...');
+    } else if (hasAttemptedFetch) {
+      console.log('Já tentou buscar, não executando novamente');
     }
-  }, [fetchUserProfile, fetchUserPosts]);
+  }, [targetUsername, currentUser, loading, hasAttemptedFetch, fetchUserProfile, fetchUserPosts]);
 
   const loadMorePosts = () => {
     if (!loading && hasMore) {
@@ -137,17 +173,145 @@ function Profile() {
     }
   };
 
+  const handleEditPost = (post) => {
+    setEditingPost(post);
+    setIsEditModalOpen(true);
+  };
+
+  const handlePostUpdated = (updatedPost) => {
+    setUserPosts(posts => posts.map(post => 
+      post.id === updatedPost.id ? updatedPost : post
+    ));
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (!currentUser || !window.confirm('Tem certeza que deseja deletar este post?')) return;
+    
+    try {
+      await axios.delete(`/api/posts/${postId}`);
+      setUserPosts(posts => posts.filter(post => post.id !== postId));
+      // Atualizar contador de posts
+      if (profileUser) {
+        setProfileUser(prev => ({
+          ...prev,
+          posts_count: Math.max(0, (prev.posts_count || 0) - 1)
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao deletar post:', error);
+    }
+  };
+
+  const handlePhotoNavigation = (postId, direction) => {
+    const post = userPosts.find(p => p.id === postId);
+    if (!post || !post.photos) return;
+
+    const currentIndex = currentPhotoIndex[postId] || 0;
+    let newIndex = currentIndex + direction;
+
+    if (newIndex < 0) {
+      newIndex = post.photos.length - 1;
+    } else if (newIndex >= post.photos.length) {
+      newIndex = 0;
+    }
+
+    setCurrentPhotoIndex(prev => ({
+      ...prev,
+      [postId]: newIndex
+    }));
+  };
+
+  const handleLike = async (postId) => {
+    if (!currentUser) return;
+    
+    try {
+      const post = userPosts.find(p => p.id === postId);
+      if (post.user_liked) {
+        // Se já deu like, remover
+        await handleUnlike(postId);
+      } else {
+        // Se não deu like, adicionar
+        const response = await axios.post(`/api/likes/${postId}`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        
+        // Atualizar o post com o novo número de likes e status de curtido
+        setUserPosts(userPosts.map(post => 
+          post.id === postId 
+            ? { ...post, likes_count: response.data.likes_count, user_liked: true }
+            : post
+        ));
+      }
+    } catch (error) {
+      console.error('Erro ao dar like:', error);
+    }
+  };
+
+  const handleUnlike = async (postId) => {
+    if (!currentUser) return;
+    
+    try {
+      const response = await axios.delete(`/api/likes/${postId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Atualizar o post com o novo número de likes e status de curtido
+      setUserPosts(userPosts.map(post => 
+        post.id === postId 
+          ? { ...post, likes_count: response.data.likes_count, user_liked: false }
+          : post
+      ));
+    } catch (error) {
+      console.error('Erro ao remover like:', error);
+    }
+  };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 1) return 'Ontem';
-    if (diffDays < 7) return `${diffDays} dias atrás`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} meses atrás`;
-    return date.toLocaleDateString('pt-BR');
+    // Calcular diferença em milissegundos
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    // Retornar texto relativo para datas recentes
+    if (diffMinutes < 1) {
+      return 'Agora mesmo';
+    } else if (diffMinutes < 60) {
+      return `há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
+    } else if (diffHours < 24) {
+      return `há ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+    } else if (diffDays === 1) {
+      return 'Ontem';
+    } else if (diffDays < 7) {
+      return `há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+    } else {
+      // Para datas mais antigas, usar formato completo
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
+
+  const renderStars = (rating) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`star ${i <= rating ? 'filled' : ''}`}
+        >
+          ★
+        </span>
+      );
+    }
+    return stars;
   };
 
   const renderPost = (post) => (
@@ -159,12 +323,15 @@ function Profile() {
               src={post.user_profile_picture} 
               alt={post.user_name}
               className="post-user-avatar"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
             />
-          ) : (
-            <div className="post-user-avatar default-avatar">
-              <img src={defaultAvatar} alt="Avatar padrão" />
-            </div>
-          )}
+          ) : null}
+          <div className="post-user-avatar default-avatar" style={{ display: post.user_profile_picture ? 'none' : 'flex' }}>
+            {post.user_name?.charAt(0)}
+          </div>
           <div className="post-user-details">
             <h4 className="post-user-name">{post.user_name}</h4>
             <span className="post-restaurant">{post.restaurant_name}</span>
@@ -178,41 +345,93 @@ function Profile() {
         
         {post.photos && post.photos.length > 0 && (
           <div className="post-photos">
-            {post.photos.map((photo, index) => (
+            {post.photos.length === 1 ? (
               <img 
-                key={photo.id} 
-                src={photo.photo_url} 
-                alt={`Foto ${index + 1}`}
+                src={post.photos[0].photo_url} 
+                alt="Foto do post"
                 className="post-photo"
               />
-            ))}
+            ) : (
+              <div className="post-photos-gallery">
+                <img 
+                  src={post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url} 
+                  alt="Foto do post"
+                  className="post-photo"
+                />
+                {post.photos.length > 1 && (
+                  <div className="photo-navigation">
+                    <button 
+                      className="nav-arrow prev-arrow"
+                      onClick={() => handlePhotoNavigation(post.id, -1)}
+                      title="Foto anterior"
+                    >
+                      ‹
+                    </button>
+                    <span className="photo-counter">
+                      {(currentPhotoIndex[post.id] || 0) + 1} / {post.photos.length}
+                    </span>
+                    <button 
+                      className="nav-arrow next-arrow"
+                      onClick={() => handlePhotoNavigation(post.id, 1)}
+                      title="Próxima foto"
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
         
         <div className="post-rating">
-          <div className="stars">
-            {[1, 2, 3, 4, 5].map(star => (
-              <span 
-                key={star} 
-                className={`star ${star <= post.rating ? 'filled' : ''}`}
-              >
-                ★
-              </span>
-            ))}
-          </div>
-          <span className="rating-text">{post.rating}/5</span>
+          {renderStars(post.rating)}
+          <span className="rating-text">{post.rating.toFixed(1)}/5.0</span>
         </div>
       </div>
       
       <div className="post-footer">
         <div className="post-stats">
-          <span className="likes-count">
-            ❤️ {post.likes_count || 0} curtidas
-          </span>
-          <span className="comments-count">
-            💬 {post.comments_count || 0} comentários
-          </span>
+          <button 
+            className="action-button"
+            onClick={() => handleLike(post.id)}
+          >
+            {post.user_liked ? (
+              <FaHeart className="liked" />
+            ) : (
+              <FaRegHeart />
+            )}
+            <span>{post.likes_count || 0}</span>
+          </button>
+          <button 
+            className="action-button"
+            onClick={() => {
+              setPostToComment(post);
+              setShowCommentsModal(true);
+            }}
+          >
+            <FaComment />
+            <span>{post.comments_count || 0}</span>
+          </button>
         </div>
+        {currentUser && currentUser.id === post.user_id && (
+          <div className="post-actions-menu">
+            <button
+              className="action-button edit-button"
+              onClick={() => handleEditPost(post)}
+              title="Editar post"
+            >
+              <FaEdit />
+            </button>
+            <button
+              className="action-button delete-button"
+              onClick={() => handleDeletePost(post.id)}
+              title="Deletar post"
+            >
+              <FaTrash />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -228,7 +447,7 @@ function Profile() {
   }
 
   return (
-    <div className="profile-container">
+    <div className="profile-page">
       {/* Header do Perfil */}
       <div className="profile-header">
         <div className="profile-cover">
@@ -261,17 +480,22 @@ function Profile() {
                 className="avatar-upload-overlay"
               />
             ) : (
-              displayUser.profile_picture ? (
-                <img 
-                  src={displayUser.profile_picture} 
-                  alt={displayUser.name || displayUser.username}
-                  className="profile-avatar"
-                />
-              ) : (
-                <div className="profile-avatar default-avatar">
-                  <img src={defaultAvatar} alt="Avatar padrão" />
+              <>
+                {displayUser.profile_picture ? (
+                  <img 
+                    src={displayUser.profile_picture} 
+                    alt={displayUser.name || displayUser.username}
+                    className="profile-avatar"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div className="profile-avatar default-avatar" style={{ display: displayUser.profile_picture ? 'none' : 'flex' }}>
+                  {displayUser.name?.charAt(0) || displayUser.username?.charAt(0)}
                 </div>
-              )
+              </>
             )}
           </div>
         </div>
@@ -422,6 +646,30 @@ function Profile() {
         onClose={() => setShowCreatePostModal(false)}
         onPostCreated={handlePostCreated}
         currentUser={currentUser}
+      />
+
+      {/* Modal de Edição de Post */}
+      <EditPostModal
+        post={editingPost}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingPost(null);
+        }}
+        onPostUpdated={handlePostUpdated}
+      />
+
+      {/* Modal de Comentários */}
+      <CommentsModal
+        post={postToComment}
+        isOpen={showCommentsModal}
+        onClose={() => setShowCommentsModal(false)}
+        onCommentAdded={(newComment) => {
+          setUserPosts(prev => prev.map(post => 
+            post.id === postToComment.id ? { ...post, comments_count: (post.comments_count || 0) + 1 } : post
+          ));
+          setPostToComment(null); // Resetar o post após adicionar comentário
+        }}
       />
     </div>
   );

@@ -4,30 +4,63 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Função para converter data para UTC-3 (Brasília)
+const convertToBrasiliaTime = (date) => {
+  if (!date) return date;
+  
+  // Se a data já é uma string, converter para Date
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Converter para UTC-3
+  const brasiliaTime = new Date(dateObj.getTime() - (3 * 60 * 60 * 1000));
+  
+  return brasiliaTime.toISOString();
+};
+
+// Função para processar comentários e converter datas
+const processComments = (comments) => {
+  return comments.map(comment => ({
+    ...comment,
+    created_at: convertToBrasiliaTime(comment.created_at)
+  }));
+};
+
 // Buscar comentários de um post
-router.get('/:postId', async (req, res) => {
+router.get('/:postId', auth, async (req, res) => {
   try {
     const { postId } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
+    const userId = req.user.id;
 
     const comments = await pool.query(`
-      SELECT c.*, u.username, u.name as user_name, u.profile_picture
+      SELECT 
+        c.*, 
+        u.username, 
+        u.name as user_name, 
+        u.profile_picture,
+        COUNT(cl.id) as likes_count,
+        COUNT(cr.id) as replies_count,
+        CASE WHEN clu.id IS NOT NULL THEN true ELSE false END as user_liked
       FROM comments c
       JOIN users u ON c.user_id = u.id
-      WHERE c.post_id = $1
+      LEFT JOIN comment_likes cl ON c.id = cl.comment_id
+      LEFT JOIN comments cr ON c.id = cr.parent_comment_id
+      LEFT JOIN comment_likes clu ON c.id = clu.comment_id AND clu.user_id = $4
+      WHERE c.post_id = $1 AND c.parent_comment_id IS NULL
+      GROUP BY c.id, c.post_id, c.user_id, c.content, c.created_at, c.parent_comment_id, u.username, u.name, u.profile_picture, clu.id
       ORDER BY c.created_at ASC
       LIMIT $2 OFFSET $3
-    `, [postId, parseInt(limit), offset]);
+    `, [postId, parseInt(limit), offset, userId]);
 
     // Contar total de comentários
     const totalCount = await pool.query(
-      'SELECT COUNT(*) as count FROM comments WHERE post_id = $1',
+      'SELECT COUNT(*) as count FROM comments WHERE post_id = $1 AND parent_comment_id IS NULL',
       [postId]
     );
 
     res.json({
-      comments: comments.rows,
+      comments: processComments(comments.rows),
       pagination: {
         current: parseInt(page),
         total: parseInt(totalCount.rows[0].count),
@@ -41,11 +74,52 @@ router.get('/:postId', async (req, res) => {
   }
 });
 
+// Buscar respostas de um comentário
+router.get('/:commentId/replies', auth, async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const offset = (page - 1) * limit;
+    const userId = req.user.id;
+
+    const replies = await pool.query(`
+      SELECT 
+        c.*, 
+        u.username, 
+        u.name as user_name, 
+        u.profile_picture,
+        COUNT(cl.id) as likes_count,
+        CASE WHEN clu.id IS NOT NULL THEN true ELSE false END as user_liked
+      FROM comments c
+      JOIN users u ON c.user_id = u.id
+      LEFT JOIN comment_likes cl ON c.id = cl.comment_id
+      LEFT JOIN comment_likes clu ON c.id = clu.comment_id AND clu.user_id = $4
+      WHERE c.parent_comment_id = $1
+      GROUP BY c.id, c.post_id, c.user_id, c.content, c.created_at, c.parent_comment_id, u.username, u.name, u.profile_picture, clu.id
+      ORDER BY c.created_at ASC
+      LIMIT $2 OFFSET $3
+    `, [commentId, parseInt(limit), offset, userId]);
+
+    res.json({
+      replies: processComments(replies.rows),
+      pagination: {
+        current: parseInt(page),
+        total: replies.rows.length,
+        pages: Math.ceil(replies.rows.length / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao buscar respostas:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Adicionar comentário
 router.post('/:postId', auth, async (req, res) => {
   try {
     const { postId } = req.params;
-    const { content } = req.body;
+    const { content, parentCommentId } = req.body;
     const userId = req.user.id;
 
     if (!content || content.trim().length === 0) {
@@ -62,28 +136,124 @@ router.post('/:postId', auth, async (req, res) => {
       return res.status(404).json({ error: 'Post não encontrado' });
     }
 
+    // Se for uma resposta, verificar se o comentário pai existe
+    if (parentCommentId) {
+      const parentComment = await pool.query(
+        'SELECT id FROM comments WHERE id = $1',
+        [parentCommentId]
+      );
+
+      if (parentComment.rows.length === 0) {
+        return res.status(404).json({ error: 'Comentário pai não encontrado' });
+      }
+    }
+
     // Criar comentário
     const newComment = await pool.query(`
-      INSERT INTO comments (post_id, user_id, content)
-      VALUES ($1, $2, $3)
+      INSERT INTO comments (post_id, user_id, content, parent_comment_id)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [postId, userId, content.trim()]);
+    `, [postId, userId, content.trim(), parentCommentId || null]);
 
     // Buscar comentário completo com dados do usuário
     const completeComment = await pool.query(`
-      SELECT c.*, u.username, u.name as user_name, u.profile_picture
+      SELECT 
+        c.*, 
+        u.username, 
+        u.name as user_name, 
+        u.profile_picture,
+        COUNT(cl.id) as likes_count,
+        COUNT(cr.id) as replies_count,
+        CASE WHEN clu.id IS NOT NULL THEN true ELSE false END as user_liked
       FROM comments c
       JOIN users u ON c.user_id = u.id
+      LEFT JOIN comment_likes cl ON c.id = cl.comment_id
+      LEFT JOIN comments cr ON c.id = cr.parent_comment_id
+      LEFT JOIN comment_likes clu ON c.id = clu.comment_id AND clu.user_id = $2
       WHERE c.id = $1
-    `, [newComment.rows[0].id]);
+      GROUP BY c.id, c.post_id, c.user_id, c.content, c.created_at, c.parent_comment_id, u.username, u.name, u.profile_picture, clu.id
+    `, [newComment.rows[0].id, userId]);
 
     res.status(201).json({
-      message: 'Comentário adicionado com sucesso!',
-      comment: completeComment.rows[0]
+      message: parentCommentId ? 'Resposta adicionada com sucesso!' : 'Comentário adicionado com sucesso!',
+      comment: processComments([completeComment.rows[0]])[0]
     });
 
   } catch (error) {
     console.error('Erro ao adicionar comentário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Curtir/descurtir comentário
+router.post('/:commentId/like', auth, async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    // Verificar se comentário existe
+    const comment = await pool.query(
+      'SELECT id FROM comments WHERE id = $1',
+      [commentId]
+    );
+
+    if (comment.rows.length === 0) {
+      return res.status(404).json({ error: 'Comentário não encontrado' });
+    }
+
+    // Verificar se já curtiu
+    const existingLike = await pool.query(
+      'SELECT id FROM comment_likes WHERE comment_id = $1 AND user_id = $2',
+      [commentId, userId]
+    );
+
+    if (existingLike.rows.length > 0) {
+      // Descurtir
+      await pool.query(
+        'DELETE FROM comment_likes WHERE comment_id = $1 AND user_id = $2',
+        [commentId, userId]
+      );
+
+      res.json({ 
+        message: 'Like removido com sucesso!',
+        liked: false 
+      });
+    } else {
+      // Curtir
+      await pool.query(
+        'INSERT INTO comment_likes (comment_id, user_id) VALUES ($1, $2)',
+        [commentId, userId]
+      );
+
+      res.json({ 
+        message: 'Comentário curtido com sucesso!',
+        liked: true 
+      });
+    }
+
+  } catch (error) {
+    console.error('Erro ao curtir comentário:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Verificar se usuário curtiu comentário
+router.get('/:commentId/like-status', auth, async (req, res) => {
+  try {
+    const { commentId } = req.params;
+    const userId = req.user.id;
+
+    const like = await pool.query(
+      'SELECT id FROM comment_likes WHERE comment_id = $1 AND user_id = $2',
+      [commentId, userId]
+    );
+
+    res.json({ 
+      liked: like.rows.length > 0 
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar like:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

@@ -3,8 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const fs = require('fs');
 const path = require('path');
+const performanceConfig = require('./config/performance');
 require('dotenv').config();
 
 console.log('Variáveis de ambiente carregadas:');
@@ -17,12 +19,20 @@ console.log('PORT:', process.env.PORT);
 // Importar rotas modulares
 const authRoutes = require('./modules/auth/auth.routes');
 const userRoutes = require('./modules/users/users.routes');
+const estabelecimentosRoutes = require('./modules/estabelecimentos/estabelecimentos.routes');
+const osmEstabelecimentosRoutes = require('./modules/osm-estabelecimentos/osm-estabelecimentos.routes');
+const googlePlacesRoutes = require('./modules/google-places/google-places.routes');
+const aiRestaurantSearchRoutes = require('./modules/ai-restaurant-search/ai-restaurant-search.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
+const restaurantOwnerRoutes = require('./modules/restaurant-owner/restaurant-owner.routes');
 const restaurantRoutes = require('./routes/restaurants');
+const restaurantPhotosRoutes = require('./modules/restaurants/restaurant-photos.routes');
 const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const likeRoutes = require('./routes/likes');
 const favoriteRoutes = require('./routes/favorites');
 const followRoutes = require('./routes/follows');
+const searchRoutes = require('./routes/search');
 const testRoutes = require('./routes/test');
 
 // Configurações
@@ -40,35 +50,20 @@ const app = express();
 // Configurar trust proxy para rate limiting
 app.set('trust proxy', 1);
 
-// Middleware de segurança
-app.use(helmet());
+// Middleware de compressão para melhor performance
+app.use(compression(performanceConfig.compression));
 
-// CORS - DEVE vir ANTES do rate limiting
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+// Middleware de segurança
+app.use(helmet(performanceConfig.security.helmet));
+
+// CORS otimizado
+app.use(cors(performanceConfig.cors));
 
 console.log('CORS configurado para:', process.env.CLIENT_URL || 'http://localhost:3000');
 
-// Rate limiting específico para autenticação
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 20, // Aumentado de 5 para 20 tentativas por IP
-  message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true, // Não contar tentativas bem-sucedidas
-  skipFailedRequests: false, // Contar apenas tentativas falhadas
-});
-
-// Rate limiting geral
-const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200 // Aumentado de 100 para 200 requests por IP
-});
+// Rate limiting otimizado usando configurações de performance
+const authLimiter = rateLimit(performanceConfig.rateLimit.auth);
+const generalLimiter = rateLimit(performanceConfig.rateLimit.general);
 
 // Aplicar rate limiting específico para rotas de auth
 app.use('/api/auth', authLimiter);
@@ -80,6 +75,17 @@ app.use('/api', generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Middleware de cache para rotas estáticas (muito seletivo)
+app.use((req, res, next) => {
+  if (performanceConfig.cache.enabled && req.method === 'GET') {
+    // Apenas para uploads de imagens (rotas estáticas)
+    if (req.path.startsWith('/uploads/')) {
+      res.set('Cache-Control', `public, max-age=${performanceConfig.cache.maxAge}`);
+    }
+  }
+  next();
+});
+
 // Servir arquivos estáticos de upload
 app.use('/uploads', express.static('uploads'));
 
@@ -89,15 +95,35 @@ app.use(cookieParser());
 // Middleware para lidar com requisições OPTIONS (preflight)
 app.options('*', cors());
 
+// Middleware adicional para CORS preflight
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma, Expires');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(200).end();
+    return;
+  }
+  next();
+});
+
 // Rotas modulares
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/estabelecimentos', estabelecimentosRoutes);
+app.use('/api/osm-estabelecimentos', osmEstabelecimentosRoutes);
+app.use('/api/google-places', googlePlacesRoutes);
+app.use('/api/ai-restaurant-search', aiRestaurantSearchRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/restaurant-owner', restaurantOwnerRoutes);
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/restaurant-photos', restaurantPhotosRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/follows', followRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api/test', testRoutes);
 
 // Rota de teste
@@ -106,8 +132,8 @@ app.get('/api/health', (req, res) => {
     status: 'OK', 
     message: 'BeastFood API funcionando!',
     timestamp: new Date().toISOString(),
-    version: '2.0.0',
-    modules: ['auth', 'users', 'restaurants', 'posts', 'comments', 'likes', 'favorites']
+    version: '2.3.0',
+    modules: ['auth', 'users', 'estabelecimentos', 'osm-estabelecimentos', 'google-places', 'ai-restaurant-search', 'restaurants', 'posts', 'comments', 'likes', 'favorites']
   });
 });
 
@@ -150,22 +176,41 @@ app.use('*', (req, res) => {
     error: 'Rota não encontrada',
     availableRoutes: [
       '/api/auth',
-      '/api/users', 
+      '/api/users',
+      '/api/estabelecimentos',
+      '/api/osm-estabelecimentos',
+      '/api/google-places',
+      '/api/ai-restaurant-search',
+      '/api/admin',
+      '/api/restaurant-owner',
       '/api/restaurants',
+      '/api/restaurant-photos',
       '/api/posts',
       '/api/comments',
       '/api/likes',
       '/api/favorites',
       '/api/follows',
+      '/api/search',
       '/api/health'
     ]
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor BeastFood v2.0 rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor BeastFood v2.3 rodando na porta ${PORT}`);
   console.log(`📱 API disponível em: http://localhost:${PORT}/api`);
   console.log(`🔒 Autenticação com refresh tokens habilitada`);
   console.log(`🗺️  Geolocalização com PostGIS habilitada`);
+  console.log(`🏪 API de Estabelecimentos implementada`);
+  console.log(`🗺️  OpenStreetMap integrado`);
+  console.log(`🌐 Google Places API integrada`);
   console.log(`📊 Estrutura modular implementada`);
+  console.log(`\n📍 Endpoints disponíveis:`);
+  console.log(`   GET  /api/estabelecimentos - Estabelecimentos manuais`);
+  console.log(`   GET  /api/osm-estabelecimentos - Estabelecimentos OpenStreetMap`);
+  console.log(`   GET  /api/osm-estabelecimentos/nearby - Busca por proximidade OSM`);
+  console.log(`   GET  /api/osm-estabelecimentos/status - Status da view OSM`);
+  console.log(`   GET  /api/google-places - Estabelecimentos Google Places`);
+  console.log(`   GET  /api/google-places/estabelecimentos/unificados - Busca unificada`);
+  console.log(`   GET  /api/google-places/estabelecimentos/proximos - Busca por proximidade`);
 });

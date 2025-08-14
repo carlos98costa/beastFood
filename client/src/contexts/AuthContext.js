@@ -1,10 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 
-// Configurar URL base do axios
+// Configurar URL base do axios com otimizações de performance
 axios.defaults.baseURL = 'http://localhost:5000';
 axios.defaults.withCredentials = true; // Importante para enviar cookies
-console.log('Axios configurado com baseURL:', axios.defaults.baseURL);
+axios.defaults.timeout = 5000; // Timeout de 5 segundos para ser mais responsivo
+// Otimizações adicionais
+axios.defaults.maxRedirects = 0; // Sem redirecionamentos
+axios.defaults.validateStatus = (status) => status < 500; // Aceitar apenas status < 500
 
 // Interceptor para renovar token automaticamente em caso de erro 401
 axios.interceptors.response.use(
@@ -12,8 +15,25 @@ axios.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Se for rate limiting, não tentar renovar
+    if (error.response?.status === 429) {
+      console.log('Rate limiting detectado no interceptor, aguardando...');
+      // Aguardar 500ms antes de rejeitar (reduzido de 1s)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return Promise.reject(error);
+    }
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      
+      // Verificar se há token no localStorage antes de tentar renovar
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) {
+        console.log('Sem token para renovar, redirecionando para logout');
+        // Disparar evento para fazer logout
+        window.dispatchEvent(new CustomEvent('tokenExpired'));
+        return Promise.reject(error);
+      }
       
       try {
         console.log('Token expirado, tentando renovar...');
@@ -30,7 +50,7 @@ axios.interceptors.response.use(
       } catch (refreshError) {
         console.error('Falha na renovação do token:', refreshError);
         
-        // Se falhar na renovação, limpar dados e redirecionar para login
+        // Se falhar na renovação, limpar dados e redirecionar para logout
         if (refreshError.response?.status === 401) {
           localStorage.removeItem('token');
           // Não usar window.location.href aqui para evitar problemas de navegação
@@ -56,6 +76,188 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  
+  // Debug: log do estado inicial
+  console.log('AuthProvider - Estado inicial:', { 
+    hasToken: !!token, 
+    loading, 
+    user: !!user 
+  });
+  
+  // Prevenir requisições duplicadas
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Usar useRef para evitar loops infinitos
+  const lastRequestTime = useRef(0);
+  const verifyTimeout = useRef(null);
+  const isInitialized = useRef(false);
+  const tokenCheckInterval = useRef(null);
+
+  // Função para logout local (sem dependências circulares)
+  const doLocalLogout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setLoading(false);
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    isInitialized.current = false;
+    
+    // Limpar intervalos e timeouts
+    if (tokenCheckInterval.current) {
+      clearInterval(tokenCheckInterval.current);
+      tokenCheckInterval.current = null;
+    }
+    if (verifyTimeout.current) {
+      clearTimeout(verifyTimeout.current);
+      verifyTimeout.current = null;
+    }
+  }, []);
+
+  // Funções memoizadas para evitar recriação
+  const checkAndRefreshToken = useCallback(async () => {
+    if (!user || !token || isRefreshing) return;
+
+    try {
+      const response = await axios.post('/api/auth/refresh');
+      const { accessToken } = response.data;
+      
+      setToken(accessToken);
+      localStorage.setItem('token', accessToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      
+      console.log('Token renovado automaticamente');
+    } catch (error) {
+      console.log('Falha na renovação automática do token:', error.message);
+    }
+  }, [user, token, isRefreshing]);
+
+  const attemptTokenRefresh = useCallback(async () => {
+    if (isRefreshing) {
+      console.log('Renovação já em andamento, pulando...');
+      return;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      console.log('Tentando renovar token...');
+      const refreshResponse = await axios.post('/api/auth/refresh');
+      const { accessToken } = refreshResponse.data;
+      
+      console.log('Token renovado com sucesso');
+      setToken(accessToken);
+      localStorage.setItem('token', accessToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      
+      // Verificar com o novo token
+      const verifyResponse = await axios.get('/api/auth/verify');
+      setUser(verifyResponse.data.user);
+      setLoading(false);
+      console.log('Token renovado e verificado com sucesso');
+    } catch (refreshError) {
+      console.error('Falha na renovação do token:', refreshError);
+      
+      if (refreshError.response?.status === 429) {
+        console.log('Rate limiting na renovação, aguardando...');
+        setTimeout(() => {
+          if (token && !isRefreshing) {
+            console.log('Tentando renovar token novamente após rate limiting...');
+            attemptTokenRefresh();
+          }
+        }, 10000); // Reduzido para 10 segundos
+        return;
+      }
+      
+      if (refreshError.response?.status === 401) {
+        console.log('Refresh token expirado ou invalidado, fazendo logout');
+        doLocalLogout();
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, token, doLocalLogout]);
+
+  const verifyToken = useCallback(async () => {
+    console.log('verifyToken chamada com:', { token: !!token, isVerifying, loading });
+    
+    if (!token || isVerifying) {
+      console.log('verifyToken: pulando verificação - sem token ou já verificando');
+      setLoading(false);
+      return;
+    }
+
+    // Prevenir requisições muito próximas (reduzido para 200ms)
+    const now = Date.now();
+    if (now - lastRequestTime.current < 200) { // 200ms
+      console.log('Requisição muito recente, aguardando...');
+      setLoading(false);
+      return;
+    }
+
+    // Limpar timeout anterior
+    if (verifyTimeout.current) {
+      clearTimeout(verifyTimeout.current);
+    }
+
+    console.log('verifyToken: executando verificação AGORA...');
+    
+    // SEM debounce - executar imediatamente
+    setIsVerifying(true);
+    lastRequestTime.current = now;
+
+    try {
+      console.log('verifyToken: fazendo requisição para /api/auth/verify...');
+      const response = await axios.get('/api/auth/verify');
+      console.log('verifyToken: resposta recebida:', response.data);
+      setUser(response.data.user);
+      setLoading(false);
+      console.log('verifyToken: usuário definido e loading false');
+    } catch (error) {
+      console.error('verifyToken: erro na verificação:', error);
+      
+      if (error.response?.status === 429) {
+        console.log('Rate limiting detectado, aguardando antes de tentar renovar...');
+        setLoading(false);
+        // Aguardar 3 segundos antes de tentar renovar (reduzido de 5s)
+        setTimeout(() => {
+          if (token && !isRefreshing) {
+            console.log('Tentando renovar token após delay...');
+            attemptTokenRefresh();
+          }
+        }, 3000);
+        return;
+      }
+      
+      if (!isRefreshing) {
+        console.log('verifyToken: tentando renovar token...');
+        attemptTokenRefresh();
+      }
+      
+      // Garantir que loading seja false mesmo em caso de erro
+      setLoading(false);
+      console.log('verifyToken: loading definido como false após erro');
+    } finally {
+      setIsVerifying(false);
+      // Garantir que loading seja false no finally
+      setLoading(false);
+      console.log('verifyToken: finally executado, loading false');
+    }
+  }, [token, isVerifying, isRefreshing, attemptTokenRefresh]);
+
+  const logout = useCallback(async () => {
+    try {
+      console.log('Fazendo logout no servidor...');
+      await axios.post('/api/auth/logout');
+      console.log('Logout no servidor realizado com sucesso');
+    } catch (error) {
+      console.error('Erro ao fazer logout no servidor:', error);
+    } finally {
+      console.log('Fazendo logout local...');
+      doLocalLogout();
+      console.log('Logout concluído');
+    }
+  }, [doLocalLogout]);
 
   // Listener para token expirado
   useEffect(() => {
@@ -69,163 +271,151 @@ export function AuthProvider({ children }) {
     return () => {
       window.removeEventListener('tokenExpired', handleTokenExpired);
     };
-  }, []);
+  }, [logout]);
 
-  // Configurar axios com token
+  // Configurar axios com token e verificar - APENAS UMA VEZ na inicialização
   useEffect(() => {
-    console.log('useEffect token mudou:', token);
-    console.log('Tipo do token:', typeof token);
-    console.log('Token é truthy:', !!token);
+    console.log('useEffect inicialização - Executando:', { 
+      hasToken: !!token, 
+      isInitialized: isInitialized.current,
+      loading 
+    });
     
-    if (token) {
-      console.log('Configurando axios com token');
+    if (token && !isInitialized.current) {
+      console.log('Configurando axios com token:', token.substring(0, 20) + '...');
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      isInitialized.current = true;
+      
+      // Verificar token apenas uma vez na inicialização
+      console.log('Chamando verifyToken...');
       verifyToken();
-    } else {
-      console.log('Sem token, definindo loading como false');
+    } else if (!token) {
+      console.log('Sem token, limpando estado...');
+      setUser(null);
+      setLoading(false); // Definir loading como false quando não há token
+      delete axios.defaults.headers.common['Authorization'];
+      isInitialized.current = false;
+    }
+
+    // Cleanup
+    return () => {
+      if (verifyTimeout.current) {
+        clearTimeout(verifyTimeout.current);
+      }
+      if (tokenCheckInterval.current) {
+        clearInterval(tokenCheckInterval.current);
+      }
+    };
+  }, []); // Remover todas as dependências para executar apenas uma vez
+
+  // useEffect adicional para garantir que loading seja false quando não há token
+  useEffect(() => {
+    if (!token && loading) {
+      console.log('Forçando loading como false (sem token)');
       setLoading(false);
     }
-  }, [token]);
+  }, [token, loading]);
 
-  // Verificar e renovar token automaticamente
+  // Timeout de segurança para evitar loading infinito (mais responsivo)
   useEffect(() => {
-    if (token) {
-      // Verificar se o token está próximo de expirar (5 minutos antes)
+    if (loading && token) {
+      console.log('Loading ativo com token, configurando timeout de segurança...');
+      const safetyTimeout = setTimeout(() => {
+        if (loading && token) {
+          console.log('Timeout de segurança: forçando loading como false');
+          setLoading(false);
+        }
+      }, 3000); // Reduzido para 3 segundos para ser mais responsivo
+
+      return () => clearTimeout(safetyTimeout);
+    }
+  }, [loading, token]);
+
+  // Verificar e renovar token automaticamente - APENAS QUANDO NECESSÁRIO
+  useEffect(() => {
+    console.log('useEffect token/user - Executando:', { 
+      hasToken: !!token, 
+      hasUser: !!user, 
+      hasInterval: !!tokenCheckInterval.current 
+    });
+    
+    if (token && user && !tokenCheckInterval.current) {
       const checkTokenExpiration = () => {
+        if (!user || !token) return;
+
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
-          const expirationTime = payload.exp * 1000; // Converter para milissegundos
+          const expirationTime = payload.exp * 1000;
           const currentTime = Date.now();
           const timeUntilExpiration = expirationTime - currentTime;
           
-          // Se faltar menos de 5 minutos para expirar, renovar
           if (timeUntilExpiration < 5 * 60 * 1000) {
             console.log('Token próximo de expirar, renovando...');
             checkAndRefreshToken();
-          } else {
-            console.log(`Token válido por mais ${Math.round(timeUntilExpiration / 60000)} minutos`);
           }
         } catch (error) {
           console.error('Erro ao verificar expiração do token:', error);
-          // Se não conseguir decodificar o token, tentar renovar
-          checkAndRefreshToken();
         }
       };
 
-      // Verificar imediatamente
-      checkTokenExpiration();
-      
-      // Verificar a cada 2 minutos
-      const tokenCheckInterval = setInterval(checkTokenExpiration, 2 * 60 * 1000);
-
-      return () => clearInterval(tokenCheckInterval);
+      // Verificar a cada 1 minuto (reduzido de 2 minutos)
+      tokenCheckInterval.current = setInterval(checkTokenExpiration, 60 * 1000);
     }
-  }, [token]);
 
-  const checkAndRefreshToken = async () => {
-    try {
-      console.log('Verificando se token precisa ser renovado...');
-      
-      // Verificar se o token está próximo de expirar (5 minutos antes)
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const expirationTime = payload.exp * 1000;
-      const currentTime = Date.now();
-      const timeUntilExpiration = expirationTime - currentTime;
-      
-      // Se faltar menos de 5 minutos para expirar, renovar
-      if (timeUntilExpiration < 5 * 60 * 1000) {
-        console.log('Token próximo de expirar, renovando...');
-        
-        const response = await axios.post('/api/auth/refresh');
-        const { accessToken } = response.data;
-        
-        setToken(accessToken);
-        localStorage.setItem('token', accessToken);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-        
-        console.log('Token renovado automaticamente');
-        
-        // Atualizar o estado do usuário se necessário
-        if (!user) {
-          try {
-            const verifyResponse = await axios.get('/api/auth/verify');
-            setUser(verifyResponse.data.user);
-            console.log('Usuário atualizado após renovação');
-          } catch (verifyError) {
-            console.error('Erro ao verificar usuário após renovação:', verifyError);
-          }
-        }
-      } else {
-        console.log(`Token ainda válido por mais ${Math.round(timeUntilExpiration / 60000)} minutos`);
+    return () => {
+      if (tokenCheckInterval.current) {
+        clearInterval(tokenCheckInterval.current);
+        tokenCheckInterval.current = null;
       }
-    } catch (error) {
-      console.log('Falha na renovação automática do token:', error.message);
-      // Se falhar, não fazer logout imediatamente, apenas logar o erro
-      // Pode ser erro temporário de rede
-    }
-  };
+    };
+  }, [token, user, checkAndRefreshToken]);
 
-  const verifyToken = async () => {
-    try {
-      console.log('Verificando token:', token);
-      const response = await axios.get('/api/auth/verify');
-      console.log('Token válido, usuário:', response.data.user);
-      setUser(response.data.user);
-    } catch (error) {
-      console.error('Token inválido, tentando renovar:', error);
-      
-      // Se a verificação falhar, tentar renovar o token
+  // Função para retry com backoff exponencial
+  const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
       try {
-        console.log('Tentando renovar token...');
-        const refreshResponse = await axios.post('/api/auth/refresh');
-        const { accessToken } = refreshResponse.data;
-        
-        console.log('Token renovado com sucesso');
-        setToken(accessToken);
-        localStorage.setItem('token', accessToken);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-        
-        // Tentar verificar novamente com o novo token
-        const verifyResponse = await axios.get('/api/auth/verify');
-        setUser(verifyResponse.data.user);
-        console.log('Token renovado e verificado com sucesso');
-      } catch (refreshError) {
-        console.error('Falha na renovação do token:', refreshError);
-        // Só fazer logout se realmente não conseguir renovar
-        if (refreshError.response?.status === 401) {
-          console.log('Refresh token expirado, fazendo logout');
-          logout();
-        } else {
-          console.log('Erro temporário na renovação, mantendo usuário logado');
-          // Não fazer logout imediatamente, pode ser erro temporário
+        return await fn();
+      } catch (error) {
+        if (error.response?.status === 429 && i < maxRetries - 1) {
+          const delay = baseDelay * Math.pow(2, i);
+          console.log(`Rate limiting, aguardando ${delay}ms antes da tentativa ${i + 1}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
         }
+        throw error;
       }
-    } finally {
-      setLoading(false);
     }
   };
 
   const login = async (username, password) => {
     try {
-      console.log('Tentando login com:', { username, password: '***' });
-      const response = await axios.post('/api/auth/login', { username, password });
-      console.log('Resposta do login:', response.data);
-      const { user, accessToken } = response.data;
+      const loginFn = async () => {
+        const response = await axios.post('/api/auth/login', { username, password });
+        return response;
+      };
       
-      console.log('Token extraído:', accessToken ? `${accessToken.substring(0, 20)}...` : 'undefined');
-      console.log('Tipo do token:', typeof accessToken);
+      // Reduzir retries e delay para melhor performance
+      const response = await retryWithBackoff(loginFn, 2, 500);
+      
+      const { user, accessToken } = response.data;
       
       setUser(user);
       setToken(accessToken);
+      setLoading(false);
       localStorage.setItem('token', accessToken);
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       
-      console.log('Login bem-sucedido, usuário definido:', user);
-      console.log('Token definido:', accessToken ? 'Sim' : 'Não');
-      console.log('Token no localStorage:', localStorage.getItem('token') ? 'Sim' : 'Não');
       return { success: true };
     } catch (error) {
       console.error('Erro no login:', error);
+      
+      if (error.response?.status === 429) {
+        return { 
+          success: false, 
+          error: 'Muitas tentativas de login. Aguarde um momento e tente novamente.' 
+        };
+      }
+      
       return { 
         success: false, 
         error: error.response?.data?.error || 'Erro no login' 
@@ -235,18 +425,15 @@ export function AuthProvider({ children }) {
 
   const register = async (userData) => {
     try {
-      console.log('Tentando registro com:', { ...userData, password: '***' });
       const response = await axios.post('/api/auth/register', userData);
-      console.log('Resposta do registro:', response.data);
       const { user, accessToken } = response.data;
       
       setUser(user);
       setToken(accessToken);
+      setLoading(false);
       localStorage.setItem('token', accessToken);
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       
-      console.log('Registro bem-sucedido, usuário definido:', user);
-      console.log('Token definido:', accessToken ? 'Sim' : 'Não');
       return { success: true };
     } catch (error) {
       console.error('Erro no registro:', error);
@@ -255,15 +442,6 @@ export function AuthProvider({ children }) {
         error: error.response?.data?.error || 'Erro no registro' 
       };
     }
-  };
-
-  const logout = () => {
-    console.log('Fazendo logout');
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-    console.log('Logout concluído');
   };
 
   const updateProfile = async (profileData) => {
@@ -282,6 +460,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
+    token,
     login,
     register,
     logout,

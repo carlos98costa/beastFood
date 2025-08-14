@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - API Google Places BeastFood</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: white;
+            color: #333;
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 2.5em;
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            font-size: 1.4em;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .input-group {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .input-group label {
+            font-weight: bold;
+            min-width: 120px;
+            color: #555;
+        }
+        
+        .input-group input, .input-group select {
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .result {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        
+        .result.success {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        
+        .result.error {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .loading {
+            color: #667eea;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .comparison-table th {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .comparison-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 2px;
+        }
+
+        .badge.restaurant { background: #28a745; color: white; }
+        .badge.cafe { background: #17a2b8; color: white; }
+        .badge.fast_food { background: #ffc107; color: black; }
+        .badge.bar { background: #dc3545; color: white; }
+        .badge.bakery { background: #fd7e14; color: white; }
+        .badge.food { background: #6f42c1; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 API Google Places - BeastFood</h1>
+        <p>Sistema de Estabelecimentos Gastronômicos com Dados do Google Places</p>
+        <p><strong>12 estabelecimentos</strong> importados de Franca-SP</p>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="test-section">
+        <h3>📊 Estatísticas da API Google Places</h3>
+        <button onclick="carregarEstatisticas()">Carregar Estatísticas</button>
+        <div id="stats-container" class="stats"></div>
+        <div id="stats-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 1: Informações da API -->
+    <div class="test-section">
+        <h3>1. ℹ️ Informações da API Google Places</h3>
+        <button onclick="testarInfo()">Testar Endpoint Raiz</button>
+        <div id="info-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 2: Listar Estabelecimentos -->
+    <div class="test-section">
+        <h3>2. 📋 Listar Estabelecimentos Google Places</h3>
+        <div class="input-group">
+            <label>Página:</label>
+            <input type="number" id="page" value="1" min="1" style="width: 80px;">
+            <label>Limite:</label>
+            <input type="number" id="limit" value="10" min="1" max="100" style="width: 80px;">
+            <label>Busca:</label>
+            <input type="text" id="search" placeholder="mcdonalds, starbucks...">
+        </div>
+        <button onclick="listarEstabelecimentos()">Listar Todos</button>
+        <button onclick="listarComFiltros()">Listar com Filtros</button>
+        <div id="list-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 3: Busca por Proximidade -->
+    <div class="test-section">
+        <h3>3. 🗺️ Busca por Proximidade (Google Places + PostGIS)</h3>
+        <div class="input-group">
+            <label>Latitude:</label>
+            <input type="number" id="lat" value="-20.5386" step="any" style="width: 120px;">
+            <label>Longitude:</label>
+            <input type="number" id="lng" value="-47.4008" step="any" style="width: 120px;">
+            <label>Raio (m):</label>
+            <input type="number" id="raio" value="2000" min="100" max="50000" style="width: 100px;">
+        </div>
+        <button onclick="buscarProximos()">Buscar Próximos</button>
+        <button onclick="centroFranca()">Centro de Franca</button>
+        <div id="proximity-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 4: Busca por Rating -->
+    <div class="test-section">
+        <h3>4. ⭐ Busca por Rating</h3>
+        <div class="input-group">
+            <label>Rating Mínimo:</label>
+            <input type="number" id="rating-min" value="4.0" step="0.1" min="0" max="5" style="width: 80px;">
+            <button onclick="buscarPorRating()">Buscar</button>
+        </div>
+        <div class="input-group">
+            <button onclick="buscarPorRating(4.5)">Excelentes (4.5+)</button>
+            <button onclick="buscarPorRating(4.0)">Muito Bons (4.0+)</button>
+            <button onclick="buscarPorRating(3.5)">Bons (3.5+)</button>
+        </div>
+        <div id="rating-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 5: Busca por Tipo -->
+    <div class="test-section">
+        <h3>5. 🍽️ Busca por Tipo</h3>
+        <div class="input-group">
+            <button onclick="buscarPorTipo('restaurant')">🍽️ Restaurantes</button>
+            <button onclick="buscarPorTipo('cafe')">☕ Cafés</button>
+            <button onclick="buscarPorTipo('fast_food')">🍔 Fast Food</button>
+            <button onclick="buscarPorTipo('bar')">🍺 Bares</button>
+            <button onclick="buscarPorTipo('bakery')">🥖 Padarias</button>
+            <button onclick="buscarPorTipo('food')">🍨 Outros</button>
+        </div>
+        <div id="type-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 6: Busca por Preço -->
+    <div class="test-section">
+        <h3>6. 💰 Busca por Faixa de Preço</h3>
+        <div class="input-group">
+            <button onclick="buscarPorPreco(1)">💰 Barato</button>
+            <button onclick="buscarPorPreco(2)">💰💰 Moderado</button>
+            <button onclick="buscarPorPreco(3)">💰💰💰 Caro</button>
+        </div>
+        <div id="price-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 7: Busca Unificada -->
+    <div class="test-section">
+        <h3>7. 🔄 Busca Unificada (Manual + Google Places)</h3>
+        <div class="input-group">
+            <label>Busca:</label>
+            <input type="text" id="unified-search" placeholder="restaurante, café...">
+            <label>Tipo:</label>
+            <select id="unified-type">
+                <option value="">Todos</option>
+                <option value="restaurant">Restaurante</option>
+                <option value="cafe">Café</option>
+                <option value="fast_food">Fast Food</option>
+                <option value="bar">Bar</option>
+            </select>
+        </div>
+        <button onclick="buscaUnificada()">Busca Unificada</button>
+        <button onclick="compararFontes()">Comparar Fontes de Dados</button>
+        <div id="unified-result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Teste 8: Busca por Nome -->
+    <div class="test-section">
+        <h3>8. 🔍 Busca por Nome</h3>
+        <div class="input-group">
+            <label>Nome:</label>
+            <input type="text" id="nome-busca" placeholder="mcdonalds, starbucks, villa...">
+            <button onclick="buscarPorNome()">Buscar</button>
+        </div>
+        <div id="name-result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/google-places';
+        
+        function mostrarResultado(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result ' + (isSuccess ? 'success' : 'error');
+            element.innerHTML = JSON.stringify(data, null, 2);
+        }
+        
+        function mostrarCarregando(elementId) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result loading';
+            element.innerHTML = 'Carregando dados do Google Places...';
+        }
+        
+        async function fazerRequisicao(url, elementId, method = 'GET', body = null) {
+            try {
+                mostrarCarregando(elementId);
+                
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                mostrarResultado(elementId, data, response.ok);
+                return data;
+            } catch (error) {
+                mostrarResultado(elementId, { error: error.message }, false);
+            }
+        }
+        
+        // Teste 1: Informações da API
+        async function testarInfo() {
+            await fazerRequisicao(`${API_BASE}/`, 'info-result');
+        }
+        
+        // Teste 2: Listar estabelecimentos
+        async function listarEstabelecimentos() {
+            const page = document.getElementById('page').value;
+            const limit = document.getElementById('limit').value;
+            await fazerRequisicao(`${API_BASE}/estabelecimentos?page=${page}&limit=${limit}`, 'list-result');
+        }
+        
+        async function listarComFiltros() {
+            const page = document.getElementById('page').value;
+            const limit = document.getElementById('limit').value;
+            const search = document.getElementById('search').value;
+            
+            let url = `${API_BASE}/estabelecimentos?page=${page}&limit=${limit}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            
+            await fazerRequisicao(url, 'list-result');
+        }
+        
+        // Teste 3: Busca por proximidade
+        async function buscarProximos() {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const raio = document.getElementById('raio').value;
+            
+            await fazerRequisicao(`${API_BASE}/estabelecimentos/proximos?lat=${lat}&lon=${lng}&raio=${raio}`, 'proximity-result');
+        }
+        
+        function centroFranca() {
+            document.getElementById('lat').value = '-20.5386';
+            document.getElementById('lng').value = '-47.4008';
+            document.getElementById('raio').value = '3000';
+            buscarProximos();
+        }
+        
+        // Teste 4: Busca por rating
+        async function buscarPorRating(rating = null) {
+            const ratingValue = rating || document.getElementById('rating-min').value;
+            await fazerRequisicao(`${API_BASE}/estabelecimentos/rating/${ratingValue}`, 'rating-result');
+        }
+        
+        // Teste 5: Busca por tipo
+        async function buscarPorTipo(tipo) {
+            await fazerRequisicao(`${API_BASE}/estabelecimentos/tipo/${tipo}`, 'type-result');
+        }
+        
+        // Teste 6: Busca por preço
+        async function buscarPorPreco(nivel) {
+            await fazerRequisicao(`${API_BASE}/estabelecimentos/preco/${nivel}`, 'price-result');
+        }
+        
+        // Teste 7: Busca unificada
+        async function buscaUnificada() {
+            const search = document.getElementById('unified-search').value;
+            const type = document.getElementById('unified-type').value;
+            
+            let params = [];
+            if (search) params.push(`search=${encodeURIComponent(search)}`);
+            if (type) params.push(`tipo=${encodeURIComponent(type)}`);
+            
+            const url = `${API_BASE}/estabelecimentos/unificados${params.length ? '?' + params.join('&') : ''}`;
+            await fazerRequisicao(url, 'unified-result');
+        }
+        
+        async function compararFontes() {
+            await fazerRequisicao(`${API_BASE}/estabelecimentos/comparar`, 'unified-result');
+        }
+        
+        // Teste 8: Busca por nome
+        async function buscarPorNome() {
+            const nome = document.getElementById('nome-busca').value;
+            if (!nome) {
+                alert('Digite um nome para buscar');
+                return;
+            }
+            await fazerRequisicao(`${API_BASE}/estabelecimentos/nome/${encodeURIComponent(nome)}`, 'name-result');
+        }
+        
+        // Estatísticas
+        async function carregarEstatisticas() {
+            try {
+                const data = await fazerRequisicao(`${API_BASE}/estabelecimentos/estatisticas`, 'stats-result');
+                
+                if (data && !data.error) {
+                    mostrarEstatisticas(data);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+        
+        function mostrarEstatisticas(stats) {
+            const container = document.getElementById('stats-container');
+            
+            let html = `
+                <div class="stat-card">
+                    <div class="stat-number">${stats.total || 0}</div>
+                    <div class="stat-label">Estabelecimentos Google Places</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.atualizacoes_recentes || 0}</div>
+                    <div class="stat-label">Atualizações (7 dias)</div>
+                </div>
+            `;
+            
+            if (stats.por_tipo && stats.por_tipo.length > 0) {
+                const tipoMaisComum = stats.por_tipo[0];
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-number">${tipoMaisComum.quantidade}</div>
+                        <div class="stat-label">${tipoMaisComum.tipo}</div>
+                    </div>
+                `;
+            }
+            
+            if (stats.mais_avaliados && stats.mais_avaliados.length > 0) {
+                const maisAvaliado = stats.mais_avaliados[0];
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-number">${maisAvaliado.rating}</div>
+                        <div class="stat-label">Melhor Rating<br/>${maisAvaliado.nome}</div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Carregar estatísticas ao carregar a página
+        window.addEventListener('load', () => {
+            carregarEstatisticas();
+        });
+    </script>
+</body>
+</html>
+

@@ -1,11 +1,33 @@
 const express = require('express');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
+const { upload, handleUploadError } = require('../middleware/upload');
 
 const router = express.Router();
 
+// Função para converter data para UTC-3 (Brasília)
+const convertToBrasiliaTime = (date) => {
+  if (!date) return date;
+  
+  // Se a data já é uma string, converter para Date
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  // Converter para UTC-3
+  const brasiliaTime = new Date(dateObj.getTime() - (3 * 60 * 60 * 1000));
+  
+  return brasiliaTime.toISOString();
+};
+
+// Função para processar posts e converter datas
+const processPosts = (posts) => {
+  return posts.map(post => ({
+    ...post,
+    created_at: convertToBrasiliaTime(post.created_at)
+  }));
+};
+
 // Buscar todos os posts (feed)
-router.get('/', async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
     const { page = 1, limit = 10, restaurant_id, user_id } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -89,7 +111,7 @@ router.get('/', async (req, res) => {
     const totalCount = await pool.query(countQuery, countParams);
 
     res.json({
-      posts: posts.rows,
+      posts: processPosts(posts.rows),
       pagination: {
         current: parseInt(page),
         total: parseInt(totalCount.rows[0].count),
@@ -206,7 +228,7 @@ router.post('/', auth, async (req, res) => {
 
     res.status(201).json({
       message: 'Post criado com sucesso!',
-      post: completePost.rows[0]
+      post: processPosts([completePost.rows[0]])[0]
     });
 
   } catch (error) {
@@ -258,9 +280,27 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
 
+    // Buscar post completo com fotos atualizadas
+    const completePost = await pool.query(`
+      SELECT p.*, 
+             u.username, u.name as user_name, u.profile_picture,
+             r.name as restaurant_name, r.address
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      JOIN restaurants r ON p.restaurant_id = r.id
+      WHERE p.id = $1
+    `, [id]);
+
+    const postPhotos = await pool.query(
+      'SELECT * FROM post_photos WHERE post_id = $1 ORDER BY uploaded_at ASC',
+      [id]
+    );
+
+    completePost.rows[0].photos = postPhotos.rows;
+
     res.json({
       message: 'Post atualizado com sucesso!',
-      post: updatedPost.rows[0]
+      post: processPosts([completePost.rows[0]])[0]
     });
 
   } catch (error) {
@@ -296,6 +336,26 @@ router.delete('/:id', auth, async (req, res) => {
 
   } catch (error) {
     console.error('Erro ao deletar post:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Upload de fotos para posts
+router.post('/upload-photo', auth, upload.single('photo'), handleUploadError, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhuma foto foi enviada' });
+    }
+
+    const photoUrl = `/uploads/${req.file.filename}`;
+    
+    res.json({
+      message: 'Foto enviada com sucesso!',
+      photoUrl: photoUrl
+    });
+
+  } catch (error) {
+    console.error('Erro ao fazer upload da foto:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

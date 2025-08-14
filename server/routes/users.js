@@ -186,15 +186,17 @@ router.get('/:id/posts', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const posts = await pool.query(`
-      SELECT p.*, r.name as restaurant_name, r.address,
+      SELECT p.*, u.name as user_name, u.profile_picture as user_profile_picture,
+             r.name as restaurant_name, r.address,
              COUNT(DISTINCT l.user_id) as likes_count,
              COUNT(DISTINCT c.id) as comments_count
       FROM posts p
+      JOIN users u ON p.user_id = u.id
       JOIN restaurants r ON p.restaurant_id = r.id
       LEFT JOIN likes l ON p.id = l.post_id
       LEFT JOIN comments c ON p.id = c.post_id
       WHERE p.user_id = $1
-      GROUP BY p.id, r.name, r.address
+      GROUP BY p.id, u.name, u.profile_picture, r.name, r.address
       ORDER BY p.created_at DESC
       LIMIT $2 OFFSET $3
     `, [id, parseInt(limit), offset]);

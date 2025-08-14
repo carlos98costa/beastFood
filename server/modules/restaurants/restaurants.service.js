@@ -3,7 +3,20 @@ const pool = require('../../config/database');
 class RestaurantsService {
   // Criar novo restaurante
   async createRestaurant(restaurantData) {
-    const { name, description, address, phone, website, cuisine_type, price_range, latitude, longitude } = restaurantData;
+    const { 
+      name, 
+      description, 
+      address, 
+      latitude, 
+      longitude, 
+      cuisine_type, 
+      price_range, 
+      phone_number, 
+      website, 
+      external_id, 
+      source,
+      created_by 
+    } = restaurantData;
     
     let location = null;
     if (latitude && longitude) {
@@ -11,14 +24,28 @@ class RestaurantsService {
     }
 
     const query = `
-      INSERT INTO restaurants (name, description, address, phone, website, cuisine_type, price_range, location)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, ${location})
+      INSERT INTO restaurants (
+        name, description, address, location, cuisine_type, 
+        price_range, phone_number, website, external_id, source, created_by
+      )
+      VALUES ($1, $2, $3, ${location}, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
 
-    const values = [name, description, address, phone, website, cuisine_type, price_range];
-    const result = await pool.query(query, values);
+    const values = [
+      name, 
+      description, 
+      address, 
+      cuisine_type, 
+      price_range, 
+      phone_number, 
+      website, 
+      external_id, 
+      source, 
+      created_by
+    ];
     
+    const result = await pool.query(query, values);
     return result.rows[0];
   }
 
@@ -27,7 +54,7 @@ class RestaurantsService {
     const result = await pool.query(
       `SELECT r.*, 
               COUNT(DISTINCT p.id) as posts_count,
-              COUNT(DISTINCT f.id) as favorites_count,
+              COUNT(DISTINCT f.user_id) as favorites_count,
               AVG(p.rating) as average_rating
        FROM restaurants r
        LEFT JOIN posts p ON r.id = p.restaurant_id
@@ -40,36 +67,88 @@ class RestaurantsService {
     return result.rows[0] || null;
   }
 
+  // Buscar restaurante por ID com fotos
+  async findRestaurantByIdWithPhotos(id) {
+    console.log('🔍 findRestaurantByIdWithPhotos chamado para ID:', id);
+    
+    const result = await pool.query(
+      `SELECT r.*, 
+              COUNT(DISTINCT p.id) as posts_count,
+              COUNT(DISTINCT f.user_id) as favorites_count,
+              AVG(p.rating) as average_rating
+       FROM restaurants r
+       LEFT JOIN posts p ON r.id = p.restaurant_id
+       LEFT JOIN favorites f ON r.id = f.restaurant_id
+       WHERE r.id = $1
+       GROUP BY r.id`,
+      [id]
+    );
+    
+    if (!result.rows[0]) {
+      console.log('❌ Restaurante não encontrado');
+      return null;
+    }
+    
+    const restaurant = result.rows[0];
+    console.log('✅ Restaurante encontrado:', restaurant.name);
+    
+    // Buscar fotos do restaurante
+    console.log('🔍 Buscando fotos...');
+    const photosResult = await pool.query(
+      `SELECT id, photo_url, photo_order, is_main, caption, created_at
+       FROM restaurant_photos 
+       WHERE restaurant_id = $1 
+       ORDER BY photo_order ASC, created_at ASC`,
+      [id]
+    );
+    
+    console.log('📸 Fotos encontradas:', photosResult.rows.length);
+    console.log('📸 Dados das fotos:', photosResult.rows);
+    
+    restaurant.photos = photosResult.rows;
+    restaurant.main_photo = photosResult.rows.find(photo => photo.is_main) || photosResult.rows[0] || null;
+    
+    console.log('✅ Fotos atribuídas ao restaurante:', restaurant.photos ? restaurant.photos.length : 'undefined');
+    console.log('✅ Main photo:', restaurant.main_photo ? restaurant.main_photo.photo_url : 'undefined');
+    
+    return restaurant;
+  }
+
   // Buscar todos os restaurantes com paginação
   async getAllRestaurants(limit = 20, offset = 0, filters = {}) {
     let whereClause = '';
     const values = [];
     let valueIndex = 1;
 
-    if (filters.cuisine_type) {
-      whereClause += ` WHERE r.cuisine_type = $${valueIndex}`;
-      values.push(filters.cuisine_type);
-      valueIndex++;
-    }
-
-    if (filters.price_range) {
-      const operator = whereClause ? 'AND' : 'WHERE';
-      whereClause += ` ${operator} r.price_range = $${valueIndex}`;
-      values.push(filters.price_range);
-      valueIndex++;
+    // Determinar ordenação
+    let orderClause = 'ORDER BY r.created_at DESC';
+    if (filters.sort_by) {
+      switch (filters.sort_by) {
+        case 'name':
+          orderClause = 'ORDER BY r.name ASC';
+          break;
+        case 'rating':
+          orderClause = 'ORDER BY average_rating DESC NULLS LAST, r.name ASC';
+          break;
+        case 'created_at':
+          orderClause = 'ORDER BY r.created_at DESC';
+          break;
+        default:
+          orderClause = 'ORDER BY r.created_at DESC';
+      }
     }
 
     const query = `
       SELECT r.*, 
               COUNT(DISTINCT p.id) as posts_count,
-              COUNT(DISTINCT f.id) as favorites_count,
+              COUNT(DISTINCT f.user_id) as favorites_count,
               AVG(p.rating) as average_rating
        FROM restaurants r
        LEFT JOIN posts p ON r.id = p.restaurant_id
        LEFT JOIN favorites f ON r.id = f.restaurant_id
        ${whereClause}
        GROUP BY r.id
-       ORDER BY r.created_at DESC
+       ${orderClause}
        LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
     `;
 
@@ -79,13 +158,29 @@ class RestaurantsService {
     return result.rows;
   }
 
+  // Buscar total de restaurantes com filtros
+  async getTotalRestaurants(filters = {}) {
+    let whereClause = '';
+    const values = [];
+    let valueIndex = 1;
+
+    const query = `
+      SELECT COUNT(*) as total
+      FROM restaurants r
+      ${whereClause}
+    `;
+
+    const result = await pool.query(query, values);
+    return parseInt(result.rows[0].total);
+  }
+
   // Buscar restaurantes próximos usando PostGIS
   async getNearbyRestaurants(latitude, longitude, radiusMeters = 5000, limit = 20) {
     try {
       const result = await pool.query(
         `SELECT r.*, 
                 COUNT(DISTINCT p.id) as posts_count,
-                COUNT(DISTINCT f.id) as favorites_count,
+                COUNT(DISTINCT f.user_id) as favorites_count,
                 AVG(p.rating) as average_rating,
                 ST_Distance(
                   r.location::geography,
@@ -113,33 +208,39 @@ class RestaurantsService {
     }
   }
 
-  // Buscar restaurantes por termo
-  async searchRestaurants(searchTerm, limit = 20, offset = 0) {
-    const result = await pool.query(
-      `SELECT r.*, 
+  // Buscar restaurantes por texto
+  async searchRestaurants(searchTerm, limit = 20) {
+    const query = `
+      SELECT r.*, 
               COUNT(DISTINCT p.id) as posts_count,
-              COUNT(DISTINCT f.id) as favorites_count,
+              COUNT(DISTINCT f.user_id) as favorites_count,
               AVG(p.rating) as average_rating
        FROM restaurants r
        LEFT JOIN posts p ON r.id = p.restaurant_id
        LEFT JOIN favorites f ON r.id = f.restaurant_id
-       WHERE r.name ILIKE $1 OR r.description ILIKE $1 OR r.cuisine_type ILIKE $1
+       WHERE r.name ILIKE $1 OR r.description ILIKE $1
        GROUP BY r.id
-       ORDER BY r.name
-       LIMIT $2 OFFSET $3`,
-      [`%${searchTerm}%`, limit, offset]
-    );
-    
+       ORDER BY 
+         CASE 
+           WHEN r.name ILIKE $1 THEN 1
+           WHEN r.description ILIKE $1 THEN 2
+           ELSE 3
+         END,
+         r.name ASC
+       LIMIT $2
+    `;
+
+    const result = await pool.query(query, [`%${searchTerm}%`, limit]);
     return result.rows;
   }
 
   // Atualizar restaurante
   async updateRestaurant(id, updateData) {
-    const { name, description, address, phone, website, cuisine_type, price_range, latitude, longitude } = updateData;
+    const { name, description, address, latitude, longitude } = updateData;
     
-    let locationUpdate = '';
+    let location = null;
     if (latitude && longitude) {
-      locationUpdate = `, location = ST_SetSRID(ST_MakePoint($${Object.keys(updateData).length + 1}, $${Object.keys(updateData).length + 2})`;
+      location = `ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)`;
     }
 
     const query = `
@@ -147,22 +248,12 @@ class RestaurantsService {
       SET name = COALESCE($1, name),
           description = COALESCE($2, description),
           address = COALESCE($3, address),
-          phone = COALESCE($4, phone),
-          website = COALESCE($5, website),
-          cuisine_type = COALESCE($6, cuisine_type),
-          price_range = COALESCE($7, price_range),
-          updated_at = CURRENT_TIMESTAMP
-          ${locationUpdate}
-      WHERE id = $${Object.keys(updateData).length + (locationUpdate ? 3 : 1)}
+          location = COALESCE(${location}, location)
+      WHERE id = $4
       RETURNING *
     `;
 
-    const values = [name, description, address, phone, website, cuisine_type, price_range];
-    if (latitude && longitude) {
-      values.push(longitude, latitude);
-    }
-    values.push(id);
-
+    const values = [name, description, address, id];
     const result = await pool.query(query, values);
     
     return result.rows[0] || null;
@@ -180,20 +271,14 @@ class RestaurantsService {
 
   // Buscar tipos de culinária disponíveis
   async getCuisineTypes() {
-    const result = await pool.query(
-      'SELECT DISTINCT cuisine_type FROM restaurants WHERE cuisine_type IS NOT NULL ORDER BY cuisine_type'
-    );
-    
-    return result.rows.map(row => row.cuisine_type);
+    // Como cuisine_type não existe na tabela, retornar array vazio
+    return [];
   }
 
   // Buscar faixas de preço disponíveis
   async getPriceRanges() {
-    const result = await pool.query(
-      'SELECT DISTINCT price_range FROM restaurants WHERE price_range IS NOT NULL ORDER BY price_range'
-    );
-    
-    return result.rows.map(row => row.price_range);
+    // Como price_range não existe na tabela, retornar array vazio
+    return [];
   }
 
   // Buscar restaurantes favoritados por um usuário
@@ -201,7 +286,7 @@ class RestaurantsService {
     const result = await pool.query(
       `SELECT r.*, 
               COUNT(DISTINCT p.id) as posts_count,
-              COUNT(DISTINCT f2.id) as favorites_count,
+              COUNT(DISTINCT f2.user_id) as favorites_count,
               AVG(p.rating) as average_rating
        FROM favorites f
        JOIN restaurants r ON f.restaurant_id = r.id

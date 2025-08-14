@@ -19,6 +19,7 @@ router.delete('/:id', auth, restaurantsController.deleteRestaurant.bind(restaura
 
 // Rotas de favoritos
 router.get('/user/favorites', auth, restaurantsController.getUserFavorites.bind(restaurantsController));
+router.get('/:id/favorite', auth, restaurantsController.checkIfFavorite.bind(restaurantsController));
 router.post('/favorites', auth, restaurantsController.addToFavorites.bind(restaurantsController));
 router.delete('/favorites/:restaurantId', auth, restaurantsController.removeFromFavorites.bind(restaurantsController));
 

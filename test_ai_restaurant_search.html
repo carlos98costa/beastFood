@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Busca Inteligente de Restaurantes | BeastFood</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 1.2rem;
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+
+        .test-title {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .result-name {
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .result-source {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #495057;
+            font-size: 1rem;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+
+        .info {
+            background: #cce7ff;
+            color: #004085;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #0066cc;
+            margin: 15px 0;
+        }
+
+        .json-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+
+        .add-restaurant-form {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Teste - Busca Inteligente de Restaurantes</h1>
+        <p class="subtitle">Sistema de IA para descobrir novos estabelecimentos em Franca-SP</p>
+
+        <!-- Teste 1: Busca com IA -->
+        <div class="test-section">
+            <h2 class="test-title">🔍 Teste 1: Busca Inteligente</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">
+                Busca estabelecimentos (restaurantes, bares, lanchonetes, padarias) que não estão na base local.
+            </p>
+            
+            <div class="form-group">
+                <label for="searchTerm">Buscar estabelecimento:</label>
+                <input type="text" id="searchTerm" placeholder="Ex: pizzaria, hamburguer, padaria..." value="pizzaria">
+            </div>
+
+            <button onclick="searchWithAI()" id="searchBtn">🔍 Buscar com IA</button>
+            <button onclick="clearResults()">🗑️ Limpar Resultados</button>
+
+            <div id="searchResults"></div>
+        </div>
+
+        <!-- Teste 2: Adicionar Restaurante -->
+        <div class="test-section">
+            <h2 class="test-title">➕ Teste 2: Adicionar Restaurante</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">
+                Simula a adição de um restaurante encontrado pela IA à base de dados.
+            </p>
+
+            <div class="form-group">
+                <label for="token">Token de Autenticação:</label>
+                <input type="text" id="token" placeholder="Cole aqui seu token JWT...">
+            </div>
+
+            <div class="add-restaurant-form" style="display: none;" id="addRestaurantForm">
+                <h3>Dados do Restaurante para Adicionar:</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                    <div class="form-group">
+                        <label for="restName">Nome:</label>
+                        <input type="text" id="restName" placeholder="Nome do restaurante">
+                    </div>
+                    <div class="form-group">
+                        <label for="restAddress">Endereço:</label>
+                        <input type="text" id="restAddress" placeholder="Endereço em Franca-SP">
+                    </div>
+                    <div class="form-group">
+                        <label for="restType">Tipo:</label>
+                        <select id="restType">
+                            <option value="Restaurante">Restaurante</option>
+                            <option value="Bar">Bar</option>
+                            <option value="Lanchonete">Lanchonete</option>
+                            <option value="Padaria">Padaria</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="restDescription">Descrição:</label>
+                        <input type="text" id="restDescription" placeholder="Descrição do estabelecimento">
+                    </div>
+                </div>
+                <button onclick="addRestaurant()" id="addBtn">➕ Adicionar à Base</button>
+            </div>
+
+            <button onclick="showAddForm()">📝 Mostrar Formulário de Teste</button>
+
+            <div id="addResults"></div>
+        </div>
+
+        <!-- Teste 3: Estatísticas -->
+        <div class="test-section">
+            <h2 class="test-title">📊 Teste 3: Estatísticas da IA</h2>
+            <p style="margin-bottom: 20px; color: #6c757d;">
+                Visualiza estatísticas dos restaurantes adicionados via sistema de IA.
+            </p>
+
+            <button onclick="getStats()">📊 Obter Estatísticas</button>
+
+            <div id="statsResults"></div>
+        </div>
+
+        <!-- Informações da API -->
+        <div class="test-section">
+            <h2 class="test-title">ℹ️ Informações da API</h2>
+            <div class="info">
+                <strong>Endpoints implementados:</strong><br>
+                • GET /api/ai-restaurant-search/search - Busca inteligente<br>
+                • POST /api/ai-restaurant-search/add-restaurant - Adicionar restaurante<br>
+                • GET /api/ai-restaurant-search/stats - Estatísticas<br><br>
+                
+                <strong>Funcionalidades:</strong><br>
+                • Busca na base local primeiro<br>
+                • Consulta Google Places API para Franca-SP<br>
+                • Gera sugestões com OpenAI para estabelecimentos locais<br>
+                • Adiciona automaticamente novos restaurantes na base<br>
+                • Foco específico em: Restaurantes, Bares, Lanchonetes e Padarias
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        async function searchWithAI() {
+            const searchTerm = document.getElementById('searchTerm').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+            const btn = document.getElementById('searchBtn');
+
+            if (!searchTerm) {
+                resultsDiv.innerHTML = '<div class="error">❌ Digite um termo para buscar</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '🔄 Buscando...';
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Buscando restaurantes em Franca-SP...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/ai-restaurant-search/search?q=${encodeURIComponent(searchTerm)}&lat=-20.5386&lng=-47.4008&city=Franca`);
+                const data = await response.json();
+
+                let html = '';
+
+                if (data.error) {
+                    html = `<div class="error">❌ ${data.error}</div>`;
+                } else {
+                    // Header dos resultados
+                    html += `
+                        <div class="results">
+                            <h3>Resultados para "${data.searchTerm}" em ${data.location || 'Franca-SP'}</h3>
+                    `;
+
+                    if (data.found_in_local) {
+                        html += `<div class="success">✅ Encontrado na base local!</div>`;
+                        
+                        if (data.restaurants && data.restaurants.length > 0) {
+                            data.restaurants.forEach(restaurant => {
+                                html += createRestaurantCard(restaurant);
+                            });
+                        }
+                    } else {
+                        const sourcesText = data.sources_used ? data.sources_used.join(', ') : 'N/A';
+                        html += `<div class="info">🤖 Sugestões via IA (Fontes: ${sourcesText})</div>`;
+                        
+                        if (data.suggestions && data.suggestions.length > 0) {
+                            data.suggestions.forEach(suggestion => {
+                                html += createRestaurantCard(suggestion);
+                            });
+                        } else {
+                            html += '<div class="error">❌ Nenhuma sugestão encontrada</div>';
+                        }
+                    }
+
+                    html += '</div>';
+
+                    // JSON completo
+                    html += `
+                        <div class="results">
+                            <h4>Resposta JSON Completa:</h4>
+                            <div class="json-output">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                }
+
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Erro:', error);
+                resultsDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Buscar com IA';
+            }
+        }
+
+        function createRestaurantCard(restaurant) {
+            const rating = restaurant.rating ? `⭐ ${restaurant.rating}/5` : 'Sem avaliação';
+            const reviews = restaurant.user_ratings_total ? `(${restaurant.user_ratings_total} avaliações)` : '';
+            const confidence = restaurant.confidence_score ? `${(restaurant.confidence_score * 100).toFixed(0)}%` : 'N/A';
+            
+            return `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3 class="result-name">${restaurant.name}</h3>
+                        <span class="result-source">${restaurant.source}</span>
+                    </div>
+                    <div class="result-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Tipo:</span>
+                            <span class="detail-value">${restaurant.cuisine_type || restaurant.establishment_type || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Endereço:</span>
+                            <span class="detail-value">${restaurant.address || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Avaliação:</span>
+                            <span class="detail-value">${rating} ${reviews}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Confiança:</span>
+                            <span class="detail-value">${confidence}</span>
+                        </div>
+                    </div>
+                    ${restaurant.description ? `<p><strong>Descrição:</strong> ${restaurant.description}</p>` : ''}
+                    <button onclick="fillAddForm('${restaurant.name}', '${restaurant.address}', '${restaurant.cuisine_type || restaurant.establishment_type || 'Restaurante'}', '${restaurant.description || ''}')">
+                        📝 Usar para Teste de Adição
+                    </button>
+                </div>
+            `;
+        }
+
+        function showAddForm() {
+            document.getElementById('addRestaurantForm').style.display = 'block';
+        }
+
+        function fillAddForm(name, address, type, description) {
+            document.getElementById('restName').value = name || '';
+            document.getElementById('restAddress').value = address || '';
+            document.getElementById('restType').value = type || 'Restaurante';
+            document.getElementById('restDescription').value = description || '';
+            showAddForm();
+        }
+
+        async function addRestaurant() {
+            const token = document.getElementById('token').value.trim();
+            const name = document.getElementById('restName').value.trim();
+            const address = document.getElementById('restAddress').value.trim();
+            const type = document.getElementById('restType').value;
+            const description = document.getElementById('restDescription').value.trim();
+            const resultsDiv = document.getElementById('addResults');
+            const btn = document.getElementById('addBtn');
+
+            if (!token) {
+                resultsDiv.innerHTML = '<div class="error">❌ Token de autenticação é obrigatório</div>';
+                return;
+            }
+
+            if (!name || !address) {
+                resultsDiv.innerHTML = '<div class="error">❌ Nome e endereço são obrigatórios</div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Adicionando...';
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Adicionando restaurante...</div>';
+
+            try {
+                const restaurantData = {
+                    name: name,
+                    address: address,
+                    description: description || `${type} em Franca-SP`,
+                    cuisine_type: type,
+                    latitude: -20.5386,
+                    longitude: -47.4008,
+                    price_level: 3,
+                    source: 'ai_search_test'
+                };
+
+                const response = await fetch(`${API_BASE}/ai-restaurant-search/add-restaurant`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(restaurantData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultsDiv.innerHTML = `
+                        <div class="success">✅ ${data.message}</div>
+                        <div class="results">
+                            <h4>Restaurante Adicionado:</h4>
+                            <div class="json-output">${JSON.stringify(data.restaurant, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                resultsDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '➕ Adicionar à Base';
+            }
+        }
+
+        async function getStats() {
+            const token = document.getElementById('token').value.trim();
+            const resultsDiv = document.getElementById('statsResults');
+
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Carregando estatísticas...</div>';
+
+            try {
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                const response = await fetch(`${API_BASE}/ai-restaurant-search/stats`, { headers });
+                const data = await response.json();
+
+                if (response.ok) {
+                    let html = `
+                        <div class="results">
+                            <h4>📊 Estatísticas da IA:</h4>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Total de Restaurantes IA:</span>
+                                    <span class="detail-value">${data.statistics.total_ai_restaurants || 0}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Adicionados últimos 30 dias:</span>
+                                    <span class="detail-value">${data.statistics.added_last_30_days || 0}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Adicionados últimos 7 dias:</span>
+                                    <span class="detail-value">${data.statistics.added_last_7_days || 0}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Avaliação Média:</span>
+                                    <span class="detail-value">${data.statistics.avg_rating_ai_restaurants ? parseFloat(data.statistics.avg_rating_ai_restaurants).toFixed(1) : 'N/A'}</span>
+                                </div>
+                            </div>
+                            <h4>JSON Completo:</h4>
+                            <div class="json-output">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                    resultsDiv.innerHTML = html;
+                } else {
+                    resultsDiv.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                resultsDiv.innerHTML = `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('addResults').innerHTML = '';
+            document.getElementById('statsResults').innerHTML = '';
+        }
+
+        // Exemplo de busca automática ao carregar a página
+        window.addEventListener('load', () => {
+            const info = document.querySelector('.info');
+            info.innerHTML += '<br><br><strong>🚀 Página carregada!</strong> Teste a busca por "pizzaria" para ver o sistema em ação.';
+        });
+    </script>
+</body>
+</html>
+
+

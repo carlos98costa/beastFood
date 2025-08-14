@@ -56,10 +56,14 @@ class AuthController {
     try {
       const { username, password } = req.body;
       console.log('Tentativa de login:', { username, password: '***' });
+      console.log('Tipo de username:', typeof username);
+      console.log('Tipo de password:', typeof password);
+      console.log('Password é truthy:', !!password);
 
       // Validar dados de entrada
       const validationErrors = authService.validateLoginData(req.body);
       if (validationErrors.length > 0) {
+        console.log('Erros de validação:', validationErrors);
         return res.status(400).json({ 
           error: 'Dados inválidos', 
           details: validationErrors 
@@ -72,6 +76,9 @@ class AuthController {
         console.log('Usuário não encontrado:', username);
         return res.status(401).json({ error: 'Credenciais inválidas' });
       }
+
+      console.log('Usuário encontrado:', user.username);
+      console.log('Password hash presente:', !!user.password_hash);
 
       // Verificar senha
       const isValidPassword = await authService.verifyPassword(password, user.password_hash);
@@ -86,6 +93,11 @@ class AuthController {
       // Remover senha do objeto de resposta
       const { password_hash, ...userWithoutPassword } = user;
 
+      // Garantir que o campo role seja incluído
+      if (!userWithoutPassword.role) {
+        userWithoutPassword.role = 'user'; // Valor padrão
+      }
+
       // Configurar cookie HTTPOnly para refresh token
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
@@ -95,6 +107,7 @@ class AuthController {
       });
 
       console.log('Login bem-sucedido para:', username);
+      console.log('User data:', userWithoutPassword);
 
       res.json({
         message: 'Login realizado com sucesso!',
@@ -137,6 +150,13 @@ class AuthController {
         return res.status(401).json({ error: 'Refresh token não fornecido' });
       }
 
+      // Verificar se o refresh token está na lista negra
+      if (authService.isTokenBlacklisted(refreshToken)) {
+        console.log('Tentativa de usar refresh token invalidado');
+        res.clearCookie('refreshToken');
+        return res.status(401).json({ error: 'Refresh token invalidado' });
+      }
+
       // Verificar refresh token
       const decoded = await authService.verifyRefreshToken(refreshToken);
       
@@ -148,6 +168,9 @@ class AuthController {
 
       // Gerar novos tokens
       const { accessToken, refreshToken: newRefreshToken } = authService.generateTokens(user.id, user.username);
+
+      // Invalidar o refresh token antigo
+      authService.blacklistToken(refreshToken);
 
       // Atualizar cookie
       res.cookie('refreshToken', newRefreshToken, {
@@ -171,6 +194,14 @@ class AuthController {
   // Logout
   async logout(req, res) {
     try {
+      const { refreshToken } = req.cookies;
+      
+      if (refreshToken) {
+        // Invalidar o refresh token
+        authService.blacklistToken(refreshToken);
+        console.log('Refresh token invalidado para logout');
+      }
+      
       // Limpar cookie do refresh token
       res.clearCookie('refreshToken');
       

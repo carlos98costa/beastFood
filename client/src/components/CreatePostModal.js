@@ -16,6 +16,7 @@ const CreatePostModal = ({
     restaurant_address: '',
     restaurant_url: ''
   });
+  const [photos, setPhotos] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [suggestingNew, setSuggestingNew] = useState(false);
@@ -88,6 +89,46 @@ const CreatePostModal = ({
     }));
   };
 
+  const uploadPhotos = async () => {
+    const uploadedPhotos = [];
+    
+    for (const photo of photos) {
+      const formData = new FormData();
+      formData.append('photo', photo.file);
+      
+      try {
+        const response = await axios.post('/api/posts/upload-photo', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        uploadedPhotos.push(response.data.photoUrl);
+      } catch (error) {
+        console.error('Erro ao fazer upload da foto:', error);
+        throw new Error('Erro ao fazer upload das fotos');
+      }
+    }
+    
+    return uploadedPhotos;
+  };
+
+  const handlePhotoChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newPhotos = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+    setPhotos(prev => [...prev, ...newPhotos]);
+  };
+
+  const removePhoto = (index) => {
+    setPhotos(prev => {
+      const newPhotos = prev.filter((_, i) => i !== index);
+      return newPhotos;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -111,18 +152,23 @@ const CreatePostModal = ({
         const restaurantResponse = await axios.post('/api/restaurants', {
           name: formData.restaurant_name,
           address: formData.restaurant_address,
-          description: `Restaurante sugerido por ${currentUser.username}`,
-          cuisine_type: 'Não especificado',
-          url: formData.restaurant_url
+          description: `Restaurante sugerido por ${currentUser.username}`
         });
         restaurantId = restaurantResponse.data.restaurant.id;
+      }
+
+      let photoUrls = [];
+      
+      if (photos.length > 0) {
+        photoUrls = await uploadPhotos();
       }
 
       // Criar o post
       const postResponse = await axios.post('/api/posts', {
         restaurant_id: restaurantId,
         content: formData.content,
-        rating: formData.rating
+        rating: formData.rating,
+        photos: photoUrls
       });
 
       onPostCreated(postResponse.data.post);
@@ -137,6 +183,7 @@ const CreatePostModal = ({
         restaurant_address: '',
         restaurant_url: ''
       });
+      setPhotos([]);
       setSuggestingNew(false);
     } catch (error) {
       console.error('Erro ao criar post:', error);
@@ -297,6 +344,39 @@ const CreatePostModal = ({
             </div>
 
             <div className="form-group">
+              <label htmlFor="photos">Fotos (opcional)</label>
+              <input
+                type="file"
+                id="photos"
+                name="photos"
+                multiple
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="photo-input"
+              />
+              <small className="form-hint">
+                Selecione uma ou mais fotos para sua avaliação
+              </small>
+              
+              {photos.length > 0 && (
+                <div className="photo-preview">
+                  {photos.map((photo, index) => (
+                    <div key={index} className="photo-item">
+                      <img src={photo.preview} alt={`Preview ${index + 1}`} />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="remove-photo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
               <label htmlFor="rating">Nota</label>
               <div className="rating-input">
                 {[1, 2, 3, 4, 5].map(star => (
@@ -309,7 +389,7 @@ const CreatePostModal = ({
                     ★
                   </button>
                 ))}
-                <span className="rating-text">{formData.rating}/5</span>
+                <span className="rating-text">{formData.rating}/5.0</span>
               </div>
             </div>
           </div>

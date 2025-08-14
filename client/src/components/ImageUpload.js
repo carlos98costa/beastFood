@@ -7,9 +7,11 @@ import './ImageUpload.css';
 const ImageUpload = ({ 
   onUploadSuccess, 
   onUploadError, 
-  type = 'avatar', // 'avatar' ou 'cover'
+  type = 'avatar', // 'avatar', 'cover', 'main_photo', 'logo'
   currentImage,
-  className = ''
+  className = '',
+  restaurantId = null,
+  axiosInstance = null
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -54,7 +56,18 @@ const ImageUpload = ({
       formData.append('image', file);
       formData.append('type', type);
 
-      const response = await axios.post('/api/users/upload-image', formData, {
+      // Determinar endpoint baseado no tipo
+      let endpoint;
+      if (type === 'main_photo' || type === 'logo') {
+        endpoint = '/api/restaurants/upload-image';
+        formData.append('restaurantId', restaurantId);
+      } else {
+        endpoint = '/api/users/upload-image';
+      }
+
+      // Usar axiosInstance se fornecido, senão usar axios padrão
+      const client = axiosInstance || axios;
+      const response = await client.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

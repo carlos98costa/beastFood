@@ -292,6 +292,13 @@
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid #e4e6eb;
+  max-width: 60%;
+  margin: 0 auto 0 auto;
+  background: white;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid #e4e6eb;
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .feed-header h2 {
@@ -302,16 +309,25 @@
 }
 
 /* Cards de Post */
-.post-card {
+.profile-page .post-card {
   border: 1px solid #e4e6eb;
   border-radius: 8px;
   margin-bottom: 20px;
   background: white;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
+  max-width: 60%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.post-card:hover {
+.profile-page .post-card:first-of-type {
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+  margin-top: 0;
+}
+
+.profile-page .post-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
@@ -331,19 +347,20 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  object-position: center;
+  min-width: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
 }
 
 .post-user-avatar.default-avatar {
-  background: #e4e6eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #65676b;
-}
-
-.post-user-avatar.default-avatar svg {
-  width: 20px;
-  height: 20px;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
 }
 
 .post-user-details {
@@ -381,24 +398,71 @@
 }
 
 .post-photos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
+  margin: 15px 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .post-photo {
   width: 100%;
-  height: 200px;
+  height: 300px;
   object-fit: cover;
   border-radius: 8px;
+  display: block;
+}
+
+.post-photos-gallery {
+  position: relative;
+  width: 100%;
+}
+
+.photo-navigation {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: white;
+}
+
+.nav-arrow {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.nav-arrow:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.photo-counter {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 40px;
+  text-align: center;
 }
 
 .post-rating {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin: 15px 0;
 }
 
 .stars {
@@ -431,16 +495,40 @@
 .post-stats {
   display: flex;
   gap: 20px;
+  align-items: center;
 }
 
-.likes-count, .comments-count {
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #65676b;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.action-button:hover {
+  background: #e4e6eb;
+  color: #1877f2;
+}
+
+.action-button .liked {
+  color: #ff6b6b;
+}
+
+.comments-count {
   font-size: 14px;
   color: #65676b;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
-.likes-count:hover, .comments-count:hover {
+.comments-count:hover {
   color: #1877f2;
 }
 
@@ -535,6 +623,18 @@
   .profile-main {
     order: 1;
   }
+  
+  .profile-page .post-card {
+    max-width: 80%;
+  }
+  
+  .feed-header {
+    max-width: 80%;
+  }
+  
+  .profile-page .post-card:first-of-type {
+    border-radius: 0 0 8px 8px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -574,7 +674,25 @@
   .post-photos {
     grid-template-columns: 1fr;
   }
-
+  
+  .profile-page .post-card {
+    max-width: 90%;
+    margin: 0 auto 20px auto;
+  }
+  
+  .profile-page .post-card:first-of-type {
+    border-radius: 0 0 8px 8px;
+    margin-top: 0;
+  }
+  
+  .feed-header {
+    max-width: 90%;
+    margin: 0 auto;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
   /* Responsividade para Upload */
   .cover-upload-overlay .upload-area.cover {
     height: 120px;
@@ -583,12 +701,6 @@
   .avatar-upload-overlay .upload-area.avatar {
     width: 100px;
     height: 100px;
-  }
-  
-  .feed-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
   }
   
   .create-post-header-btn {
@@ -606,5 +718,25 @@
   .stat-item {
     flex-direction: row;
     gap: 8px;
+  }
+  
+  .profile-page .post-card {
+    max-width: 95%;
+    margin: 0 5px 20px 5px;
+  }
+  
+  .profile-page .post-card:first-of-type {
+    border-radius: 0 0 8px 8px;
+    margin-top: 0;
+  }
+  
+  .feed-header {
+    max-width: 95%;
+    margin: 0 5px;
+    padding: 15px;
+  }
+  
+  .profile-header, .profile-content {
+    margin: 5px;
   }
 }

@@ -1,95 +1,83 @@
-# 🔒 Solução para Logout Automático ao Atualizar Página
+# Solução para Problema de Logout - BeastFood
 
-## 📋 Problema Identificado
+## Problema Identificado
 
-Quando a página era atualizada (F5), o usuário era automaticamente deslogado devido a:
+Quando o usuário clicava para sair e deslogar da conta, e depois pressionava F5, ele voltava a estar logado automaticamente. Isso acontecia porque:
 
-1. **Token de acesso com expiração curta**: 15 minutos
-2. **Falta de renovação automática**: O sistema não renovava tokens expirados
-3. **Ausência de refresh tokens**: Não havia mecanismo para renovar tokens sem fazer login novamente
+1. **Logout incompleto**: O logout estava sendo feito apenas no frontend (removendo o token do localStorage)
+2. **Refresh token ativo**: O refresh token continuava válido no cookie HTTPOnly
+3. **Renovação automática**: O sistema tentava renovar automaticamente o access token usando o refresh token válido
 
-## 🛠️ Soluções Implementadas
+## Solução Implementada
 
-### 1. **Sistema de Refresh Token Automático**
-- Implementado no `AuthContext.js` do cliente
-- Verifica automaticamente se o token está próximo de expirar (5 minutos antes)
-- Renova o token usando o refresh token armazenado em cookie HTTP-only
-- Mantém o usuário logado sem interrupção
+### 1. Backend - Invalidação de Refresh Tokens
 
-### 2. **Interceptor do Axios**
-- Captura automaticamente erros 401 (token expirado)
-- Tenta renovar o token automaticamente
-- Reenviar a requisição original com o novo token
-- Transparente para o usuário
+#### `server/modules/auth/auth.service.js`
+- Adicionada lista negra de tokens invalidados (`blacklistedTokens`)
+- Método `blacklistToken()` para invalidar tokens
+- Método `isTokenBlacklisted()` para verificar se token está invalidado
+- Verificação de lista negra no `verifyRefreshToken()`
 
-### 3. **Aumento do Tempo de Expiração**
-- Access token: de 15 minutos para **1 hora**
-- Refresh token: mantido em **7 dias**
-- Reduz a frequência de renovação necessária
+#### `server/modules/auth/auth.controller.js`
+- **Logout**: Invalida o refresh token antes de limpar o cookie
+- **Refresh**: Verifica se o refresh token está na lista negra
+- **Refresh**: Invalida o refresh token antigo ao gerar um novo
 
-### 4. **Verificação Inteligente de Expiração**
-- Decodifica o JWT para verificar tempo de expiração
-- Renova apenas quando necessário (5 minutos antes de expirar)
-- Verificação a cada 2 minutos (otimizado)
+### 2. Frontend - Melhorias no AuthContext
 
-## 🔧 Arquivos Modificados
+#### `client/src/contexts/AuthContext.js`
+- **Logout assíncrono**: Chama a rota de logout do servidor antes de limpar dados locais
+- **Verificação de usuário**: Não tenta renovar tokens se não há usuário logado
+- **Interceptor melhorado**: Verifica se há token antes de tentar renovar automaticamente
+- **Limpeza de estado**: Garante que o usuário seja limpo quando não há token
 
-### `client/src/contexts/AuthContext.js`
-- ✅ Sistema de renovação automática
-- ✅ Interceptor do axios
-- ✅ Verificação inteligente de expiração
-- ✅ Configuração `withCredentials: true`
+## Como Funciona Agora
 
-### `server/modules/auth/auth.service.js`
-- ✅ Tempo de expiração do access token aumentado para 1 hora
+### Processo de Logout
+1. Usuário clica em "Sair"
+2. Frontend chama `/api/auth/logout` no servidor
+3. Servidor invalida o refresh token (adiciona à lista negra)
+4. Servidor limpa o cookie do refresh token
+5. Frontend limpa dados locais (token, usuário, localStorage)
+6. Usuário é redirecionado para a página inicial
 
-## 🧪 Como Testar
+### Proteção contra Renovação Automática
+- Refresh tokens invalidados são rejeitados pelo servidor
+- Frontend não tenta renovar tokens se não há usuário logado
+- Sistema de lista negra previne reutilização de tokens invalidados
 
-1. **Abra o arquivo de teste**: `test_token_refresh.html`
-2. **Faça login** com um usuário válido
-3. **Teste a renovação** clicando em "Testar Refresh"
-4. **Verifique os logs** para acompanhar o processo
+## Arquivos Modificados
 
-## 📱 Funcionamento
+### Backend
+- `server/modules/auth/auth.service.js` - Lista negra de tokens
+- `server/modules/auth/auth.controller.js` - Invalidação no logout/refresh
 
-### Fluxo Normal:
-1. Usuário faz login → recebe access token (1h) + refresh token (7d)
-2. Access token é usado para requisições
-3. Sistema verifica expiração automaticamente
-4. Token é renovado 5 minutos antes de expirar
-5. Usuário permanece logado sem interrupção
+### Frontend
+- `client/src/contexts/AuthContext.js` - Logout assíncrono e verificações
 
-### Em Caso de Erro 401:
-1. Interceptor captura o erro
-2. Tenta renovar o token automaticamente
-3. Reenvia a requisição original
-4. Se falhar, redireciona para login
+### Teste
+- `test_logout.html` - Página de teste para verificar funcionamento
 
-## 🎯 Benefícios
+## Como Testar
 
-- ✅ **Usuário não é mais deslogado** ao atualizar a página
-- ✅ **Experiência contínua** sem interrupções
-- ✅ **Segurança mantida** com tokens de curta duração
-- ✅ **Renovação transparente** para o usuário
-- ✅ **Fallback automático** em caso de falha
+1. **Fazer login** na aplicação
+2. **Verificar** que está logado (deve aparecer nome do usuário na navbar)
+3. **Clicar em "Sair"** no menu do usuário
+4. **Verificar** que foi redirecionado para a página inicial
+5. **Pressionar F5** ou recarregar a página
+6. **Verificar** que continua deslogado (não deve aparecer nome do usuário)
 
-## 🔍 Monitoramento
+## Benefícios da Solução
 
-O sistema inclui logs detalhados para:
-- Verificação de expiração
-- Renovação automática
-- Erros de autenticação
-- Status do usuário
+- ✅ **Logout completo**: Usuário não volta a estar logado após F5
+- ✅ **Segurança**: Refresh tokens são invalidados no servidor
+- ✅ **Performance**: Não há tentativas desnecessárias de renovação
+- ✅ **Robustez**: Sistema funciona mesmo com erros temporários de rede
+- ✅ **Manutenibilidade**: Código mais limpo e organizado
 
-## 🚀 Próximos Passos
+## Considerações Técnicas
 
-1. **Testar em produção** com diferentes cenários
-2. **Monitorar logs** para identificar possíveis problemas
-3. **Ajustar tempos** se necessário (baseado no uso real)
-4. **Implementar métricas** de renovação de tokens
-
----
-
-**Status**: ✅ Implementado e testado  
-**Data**: $(Get-Date -Format "dd/MM/yyyy HH:mm")  
-**Versão**: 2.0.0
+- A lista negra de tokens é mantida em memória (Set)
+- Tokens são removidos automaticamente da lista negra após 7 dias
+- O sistema continua funcionando mesmo se o logout no servidor falhar
+- Todas as verificações de token incluem validação de usuário logado

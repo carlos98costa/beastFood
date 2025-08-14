@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Logout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ccc;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .logout-button {
+            background-color: #dc3545;
+        }
+        .logout-button:hover {
+            background-color: #c82333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Logout - BeastFood</h1>
+    
+    <div class="test-section">
+        <h2>Status Atual</h2>
+        <div id="status" class="status info">Verificando status...</div>
+        <div id="token-info"></div>
+        <div id="user-info"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Testes de Autenticação</h2>
+        <button class="button" onclick="checkAuthStatus()">Verificar Status</button>
+        <button class="button" onclick="checkLocalStorage()">Verificar LocalStorage</button>
+        <button class="button" onclick="checkCookies()">Verificar Cookies</button>
+        <button class="button logout-button" onclick="testLogout()">Testar Logout</button>
+        <button class="button" onclick="refreshPage()">Recarregar Página (F5)</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Logs</h2>
+        <div id="logs" style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            logEntry.style.fontSize = '12px';
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            
+            if (type === 'error') {
+                logEntry.style.color = '#dc3545';
+            } else if (type === 'success') {
+                logEntry.style.color = '#28a745';
+            }
+            
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function updateTokenInfo() {
+            const tokenInfoDiv = document.getElementById('token-info');
+            const token = localStorage.getItem('token');
+            
+            if (token) {
+                tokenInfoDiv.innerHTML = `
+                    <strong>Token:</strong> ${token.substring(0, 20)}...<br>
+                    <strong>Token Length:</strong> ${token.length}<br>
+                    <strong>Token Type:</strong> ${typeof token}
+                `;
+            } else {
+                tokenInfoDiv.innerHTML = '<strong>Token:</strong> Nenhum token encontrado';
+            }
+        }
+
+        function updateUserInfo() {
+            const userInfoDiv = document.getElementById('user-info');
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            
+            if (user) {
+                userInfoDiv.innerHTML = `
+                    <strong>Usuário:</strong> ${user.username || 'N/A'}<br>
+                    <strong>Nome:</strong> ${user.name || 'N/A'}<br>
+                    <strong>Role:</strong> ${user.role || 'N/A'}
+                `;
+            } else {
+                userInfoDiv.innerHTML = '<strong>Usuário:</strong> Nenhum usuário logado';
+            }
+        }
+
+        async function checkAuthStatus() {
+            try {
+                log('Verificando status de autenticação...');
+                
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    updateStatus('Usuário não autenticado', 'info');
+                    log('Nenhum token encontrado no localStorage');
+                    return;
+                }
+
+                // Tentar verificar o token no servidor
+                const response = await fetch('http://localhost:5000/api/auth/verify', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus(`Usuário autenticado: ${data.user.username}`, 'success');
+                    log(`Token válido para usuário: ${data.user.username}`);
+                } else {
+                    updateStatus('Token inválido ou expirado', 'error');
+                    log('Token inválido ou expirado');
+                }
+            } catch (error) {
+                updateStatus(`Erro ao verificar autenticação: ${error.message}`, 'error');
+                log(`Erro: ${error.message}`, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            log('=== VERIFICAÇÃO DO LOCALSTORAGE ===');
+            log(`Token: ${localStorage.getItem('token') ? 'Presente' : 'Ausente'}`);
+            log(`User: ${localStorage.getItem('user') ? 'Presente' : 'Ausente'}`);
+            
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const expirationTime = new Date(payload.exp * 1000);
+                    log(`Token expira em: ${expirationTime.toLocaleString()}`);
+                    log(`Tempo restante: ${Math.round((payload.exp * 1000 - Date.now()) / 60000)} minutos`);
+                } catch (error) {
+                    log(`Erro ao decodificar token: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function checkCookies() {
+            log('=== VERIFICAÇÃO DOS COOKIES ===');
+            const cookies = document.cookie.split(';');
+            if (cookies.length === 1 && cookies[0] === '') {
+                log('Nenhum cookie encontrado');
+            } else {
+                cookies.forEach(cookie => {
+                    const [name, value] = cookie.trim().split('=');
+                    log(`Cookie: ${name} = ${value ? value.substring(0, 20) + '...' : 'undefined'}`);
+                });
+            }
+        }
+
+        async function testLogout() {
+            try {
+                log('=== TESTANDO LOGOUT ===');
+                
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    log('Nenhum token para fazer logout', 'info');
+                    return;
+                }
+
+                // Chamar rota de logout do servidor
+                log('Chamando rota de logout do servidor...');
+                const response = await fetch('http://localhost:5000/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    log('Logout no servidor realizado com sucesso', 'success');
+                } else {
+                    log(`Erro no logout do servidor: ${response.status}`, 'error');
+                }
+
+                // Limpar dados locais
+                log('Limpando dados locais...');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                
+                updateStatus('Logout realizado com sucesso', 'success');
+                updateTokenInfo();
+                updateUserInfo();
+                
+                log('Logout concluído', 'success');
+                
+            } catch (error) {
+                log(`Erro no logout: ${error.message}`, 'error');
+            }
+        }
+
+        function refreshPage() {
+            log('=== RECARREGANDO PÁGINA ===');
+            log('Pressione F5 ou recarregue a página para testar');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+
+        // Inicialização
+        function init() {
+            log('Página carregada, verificando estado inicial...');
+            updateTokenInfo();
+            updateUserInfo();
+            checkAuthStatus();
+        }
+
+        // Executar quando a página carregar
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+

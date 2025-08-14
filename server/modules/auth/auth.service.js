@@ -6,6 +6,21 @@ const { JWT_SECRET, JWT_REFRESH_SECRET } = require('../../config/jwt');
 class AuthService {
   constructor() {
     this.saltRounds = 12;
+    this.blacklistedTokens = new Set(); // Lista negra de tokens invalidados
+  }
+
+  // Adicionar token à lista negra
+  blacklistToken(token) {
+    this.blacklistedTokens.add(token);
+    // Limpar tokens antigos da lista negra após 7 dias
+    setTimeout(() => {
+      this.blacklistedTokens.delete(token);
+    }, 7 * 24 * 60 * 60 * 1000);
+  }
+
+  // Verificar se token está na lista negra
+  isTokenBlacklisted(token) {
+    return this.blacklistedTokens.has(token);
   }
 
   // Gerar tokens JWT
@@ -43,9 +58,9 @@ class AuthService {
 
     // Inserir usuário
     const result = await pool.query(
-      `INSERT INTO users (name, username, email, password_hash, bio) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, name, username, email, bio, profile_picture, created_at`,
+      `INSERT INTO users (name, username, email, password_hash, bio, role) 
+       VALUES ($1, $2, $3, $4, $5, 'user') 
+       RETURNING id, name, username, email, bio, profile_picture, created_at, role`,
       [name, username, email, passwordHash, bio]
     );
 
@@ -55,7 +70,7 @@ class AuthService {
   // Buscar usuário por credenciais
   async findUserByCredentials(identifier) {
     const result = await pool.query(
-      'SELECT * FROM users WHERE username = $1 OR email = $1',
+      'SELECT id, name, username, email, bio, profile_picture, created_at, role, password_hash FROM users WHERE username = $1 OR email = $1',
       [identifier]
     );
     return result.rows[0] || null;
@@ -63,7 +78,32 @@ class AuthService {
 
   // Verificar senha
   async verifyPassword(password, passwordHash) {
-    return await bcrypt.compare(password, passwordHash);
+    console.log('=== VERIFICANDO SENHA ===');
+    console.log('Tipo de password:', typeof password);
+    console.log('Password é truthy:', !!password);
+    console.log('Password length:', password ? password.length : 'undefined');
+    console.log('Tipo de passwordHash:', typeof passwordHash);
+    console.log('PasswordHash é truthy:', !!passwordHash);
+    console.log('PasswordHash length:', passwordHash ? passwordHash.length : 'undefined');
+    
+    if (!password) {
+      console.error('ERRO: Password é undefined ou null');
+      throw new Error('Password é obrigatório');
+    }
+    
+    if (!passwordHash) {
+      console.error('ERRO: PasswordHash é undefined ou null');
+      throw new Error('Hash da senha não encontrado');
+    }
+    
+    try {
+      const result = await bcrypt.compare(password, passwordHash);
+      console.log('Resultado da comparação:', result);
+      return result;
+    } catch (error) {
+      console.error('Erro na comparação bcrypt:', error);
+      throw error;
+    }
   }
 
   // Verificar token de acesso
@@ -79,6 +119,11 @@ class AuthService {
   // Verificar token de refresh
   async verifyRefreshToken(token) {
     try {
+      // Verificar se o token está na lista negra
+      if (this.isTokenBlacklisted(token)) {
+        throw new Error('Refresh token invalidado');
+      }
+
       const decoded = jwt.verify(token, JWT_REFRESH_SECRET);
       return decoded;
     } catch (error) {
@@ -89,7 +134,7 @@ class AuthService {
   // Buscar usuário por ID
   async findUserById(userId) {
     const result = await pool.query(
-      'SELECT id, name, username, email, bio, profile_picture, created_at FROM users WHERE id = $1',
+      'SELECT id, name, username, email, bio, profile_picture, created_at, role FROM users WHERE id = $1',
       [userId]
     );
     return result.rows[0] || null;

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Rotas de Favoritos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a6fd8;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste das Rotas de Favoritos</h1>
+    
+    <div class="test-section">
+        <h3>Configuração</h3>
+        <input type="text" id="token" placeholder="Token JWT" style="width: 400px;">
+        <button onclick="setToken()">Definir Token</button>
+        <div id="tokenStatus"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Verificar se Restaurante é Favorito</h3>
+        <input type="number" id="restaurantId" placeholder="ID do restaurante" value="1">
+        <button onclick="testCheckFavorite()">Verificar Favorito</button>
+        <div id="result1"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Adicionar aos Favoritos</h3>
+        <input type="number" id="restaurantIdAdd" placeholder="ID do restaurante" value="1">
+        <button onclick="testAddFavorite()">Adicionar aos Favoritos</button>
+        <div id="result2"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Remover dos Favoritos</h3>
+        <input type="number" id="restaurantIdRemove" placeholder="ID do restaurante" value="1">
+        <button onclick="testRemoveFavorite()">Remover dos Favoritos</button>
+        <div id="result3"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Teste de Conexão</h3>
+        <button onclick="testConnection()">Testar Conexão com Servidor</button>
+        <div id="result4"></div>
+    </div>
+
+    <script>
+        let currentToken = '';
+
+        function setToken() {
+            currentToken = document.getElementById('token').value;
+            if (currentToken) {
+                document.getElementById('tokenStatus').innerHTML = '<span class="success">Token definido!</span>';
+            } else {
+                document.getElementById('tokenStatus').innerHTML = '<span class="error">Token vazio!</span>';
+            }
+        }
+
+        async function makeRequest(endpoint, options = {}) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                };
+
+                if (currentToken) {
+                    headers['Authorization'] = `Bearer ${currentToken}`;
+                }
+
+                const response = await fetch(`http://localhost:5000/api/restaurants${endpoint}`, {
+                    headers,
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                throw error;
+            }
+        }
+
+        function displayResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `
+                <h4 class="${isError ? 'error' : 'success'}">
+                    ${isError ? 'Erro' : 'Sucesso'}
+                </h4>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        async function testCheckFavorite() {
+            try {
+                const id = document.getElementById('restaurantId').value;
+                const result = await makeRequest(`/${id}/favorite`);
+                displayResult('result1', result);
+            } catch (error) {
+                displayResult('result1', { error: error.message }, true);
+            }
+        }
+
+        async function testAddFavorite() {
+            try {
+                const id = document.getElementById('restaurantIdAdd').value;
+                const result = await makeRequest('/favorites', {
+                    method: 'POST',
+                    body: JSON.stringify({ restaurantId: parseInt(id) })
+                });
+                displayResult('result2', result);
+            } catch (error) {
+                displayResult('result2', { error: error.message }, true);
+            }
+        }
+
+        async function testRemoveFavorite() {
+            try {
+                const id = document.getElementById('restaurantIdRemove').value;
+                const result = await makeRequest(`/favorites/${id}`, {
+                    method: 'DELETE'
+                });
+                displayResult('result3', result);
+            } catch (error) {
+                displayResult('result3', { error: error.message }, true);
+            }
+        }
+
+        async function testConnection() {
+            try {
+                const result = await makeRequest('/test');
+                displayResult('result4', result);
+            } catch (error) {
+                displayResult('result4', { error: error.message }, true);
+            }
+        }
+
+        // Teste automático ao carregar a página
+        window.onload = function() {
+            console.log('Página carregada. Configure um token JWT e teste as rotas de favoritos.');
+        };
+    </script>
+</body>
+</html>

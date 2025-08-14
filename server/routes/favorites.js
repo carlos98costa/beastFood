@@ -4,6 +4,14 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Função para processar restaurantes e converter average_rating para número
+const processRestaurants = (restaurants) => {
+  return restaurants.map(restaurant => ({
+    ...restaurant,
+    average_rating: restaurant.average_rating ? parseFloat(restaurant.average_rating) : null
+  }));
+};
+
 // Adicionar restaurante aos favoritos
 router.post('/:restaurantId', auth, async (req, res) => {
   try {
@@ -107,12 +115,14 @@ router.get('/user/:userId', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const favorites = await pool.query(`
-      SELECT r.*, f.created_at as favorited_at,
+      SELECT r.*, 
              COUNT(DISTINCT p.id) as posts_count,
-             AVG(p.rating) as average_rating
+             CAST(COALESCE(AVG(p.rating), 0) AS DECIMAL(3,2)) as average_rating,
+             COUNT(DISTINCT f2.user_id) as favorites_count
       FROM favorites f
       JOIN restaurants r ON f.restaurant_id = r.id
       LEFT JOIN posts p ON r.id = p.restaurant_id
+      LEFT JOIN favorites f2 ON r.id = f2.restaurant_id
       WHERE f.user_id = $1
       GROUP BY r.id, f.created_at
       ORDER BY f.created_at DESC
@@ -126,7 +136,7 @@ router.get('/user/:userId', async (req, res) => {
     );
 
     res.json({
-      favorites: favorites.rows,
+      favorites: processRestaurants(favorites.rows),
       pagination: {
         current: parseInt(page),
         total: parseInt(totalCount.rows[0].count),
