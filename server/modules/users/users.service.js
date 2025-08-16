@@ -65,13 +65,16 @@ class UsersService {
   }
 
   // Buscar posts do usuário
-  async getUserPosts(userId, limit = 10, offset = 0) {
+  async getUserPosts(userId, limit = 10, offset = 0, currentUserId = null) {
     const result = await pool.query(
-      `SELECT p.*, 
+      `SELECT p.*,
               u.name as user_name, u.username as user_username, u.profile_picture as user_profile_picture,
               r.name as restaurant_name, r.address as restaurant_address,
               COUNT(DISTINCT l.id) as likes_count,
-              COUNT(DISTINCT c.id) as comments_count
+              COUNT(DISTINCT c.id) as comments_count,
+              CASE WHEN $4::int IS NULL THEN false
+                   ELSE EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $4)
+              END as user_liked
        FROM posts p
        JOIN users u ON p.user_id = u.id
        LEFT JOIN restaurants r ON p.restaurant_id = r.id
@@ -81,7 +84,7 @@ class UsersService {
        GROUP BY p.id, u.name, u.username, u.profile_picture, r.name, r.address
        ORDER BY p.created_at DESC
        LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
+      [userId, limit, offset, currentUserId]
     );
     
     // Buscar fotos para cada post

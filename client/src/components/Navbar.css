@@ -205,12 +205,12 @@
   padding: 8px 16px;
   border-radius: 6px;
   transition: all 0.2s ease;
-  color: #1877f2;
+  color: var(--primary-color);
   font-weight: 600;
 }
 
 .create-post-button:hover {
-  background: #f0f8ff;
+  background: #fff3ec;
   transform: translateY(-1px);
 }
 

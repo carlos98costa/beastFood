@@ -9,6 +9,7 @@ import CreatePostModal from '../components/CreatePostModal';
 import EditPostModal from '../components/EditPostModal';
 import CommentsModal from '../components/CommentsModal';
 import FollowButton from '../components/FollowButton';
+import FollowListModal from '../components/FollowListModal';
 // defaultAvatar removido pois não estava sendo utilizado
 import defaultCover from '../assets/default-cover.svg';
 import './Profile.css';
@@ -33,6 +34,8 @@ function Profile() {
   const [followingCount, setFollowingCount] = useState(0);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [postToComment, setPostToComment] = useState(null);
+  const [showFollowModal, setShowFollowModal] = useState(false);
+  const [followModalType, setFollowModalType] = useState('followers');
 
   // Normaliza URLs relativas de imagens para ambiente de desenvolvimento
   const resolveUrl = (url) => {
@@ -536,11 +539,19 @@ function Profile() {
               <span className="stat-number">{userPosts.length}</span>
               <span className="stat-label">Avaliações</span>
             </div>
-            <div className="stat-item">
+            <div
+              className="stat-item clickable"
+              onClick={() => { setFollowModalType('following'); setShowFollowModal(true); }}
+              title="Ver usuários que este perfil segue"
+            >
               <span className="stat-number">{followingCount}</span>
               <span className="stat-label">Seguindo</span>
             </div>
-            <div className="stat-item">
+            <div
+              className="stat-item clickable"
+              onClick={() => { setFollowModalType('followers'); setShowFollowModal(true); }}
+              title="Ver seguidores deste perfil"
+            >
               <span className="stat-number">{followersCount}</span>
               <span className="stat-label">Seguidores</span>
             </div>
@@ -687,12 +698,29 @@ function Profile() {
         post={postToComment}
         isOpen={showCommentsModal}
         onClose={() => setShowCommentsModal(false)}
-        onCommentAdded={(newComment) => {
-          setUserPosts(prev => prev.map(post => 
-            post.id === postToComment.id ? { ...post, comments_count: (post.comments_count || 0) + 1 } : post
-          ));
-          setPostToComment(null); // Resetar o post após adicionar comentário
+        onCommentAdded={(newComment, increment) => {
+          if (newComment) {
+            setUserPosts(prev => prev.map(post => 
+              post.id === postToComment.id 
+                ? { ...post, comments_count: (post.comments_count || 0) + 1 } 
+                : post
+            ));
+          } else if (increment === -1) {
+            setUserPosts(prev => prev.map(post => 
+              post.id === postToComment.id 
+                ? { ...post, comments_count: Math.max(0, (post.comments_count || 0) - 1) } 
+                : post
+            ));
+          }
         }}
+      />
+
+      {/* Modal de Seguidores/Seguindo */}
+      <FollowListModal
+        isOpen={showFollowModal}
+        onClose={() => setShowFollowModal(false)}
+        username={displayUser?.username}
+        type={followModalType}
       />
     </div>
   );

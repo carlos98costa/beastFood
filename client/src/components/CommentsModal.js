@@ -82,7 +82,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
 
   // Navegar entre fotos
   const handlePhotoNavigation = (direction) => {
-    if (!post.photos) return;
+    if (!post?.photos?.length) return;
     
     const newIndex = currentPhotoIndex + direction;
     if (newIndex >= 0 && newIndex < post.photos.length) {
@@ -133,7 +133,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
   // Adicionar comentário
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !post?.id) return;
 
     try {
       setLoading(true);
@@ -165,7 +165,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
   // Adicionar resposta
   const handleSubmitReply = async (e) => {
     e.preventDefault();
-    if (!replyContent.trim() || !replyingTo) return;
+    if (!replyContent.trim() || !replyingTo || !post?.id) return;
 
     try {
       setLoading(true);
@@ -380,16 +380,16 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
 
         {/* Seção da imagem (lado esquerdo) */}
         <div className="post-image-section">
-          {post.photos && post.photos.length > 0 ? (
+          {post?.photos?.length > 0 ? (
             <>
               <img 
-                src={post.photos[currentPhotoIndex].photo_url} 
+                src={post?.photos?.[currentPhotoIndex]?.photo_url} 
                 alt={`Foto ${currentPhotoIndex + 1}`}
                 className="post-image-main"
               />
               
               {/* Navegação de fotos */}
-              {post.photos.length > 1 && (
+              {post?.photos?.length > 1 && (
                 <div className="photo-navigation-main">
                   <button 
                     className="photo-nav-main-btn"
@@ -401,13 +401,13 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                   </button>
                   
                   <span className="photo-counter-main">
-                    {currentPhotoIndex + 1} / {post.photos.length}
+                    {currentPhotoIndex + 1} / {post?.photos?.length || 0}
                   </span>
                   
                   <button 
                     className="photo-nav-main-btn"
                     onClick={() => handlePhotoNavigation(1)}
-                    disabled={currentPhotoIndex === post.photos.length - 1}
+                    disabled={currentPhotoIndex === ((post?.photos?.length || 0) - 1)}
                     aria-label="Próxima foto"
                   >
                     <FaChevronRight />
@@ -471,7 +471,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                       </div>
                       
                       {/* Botões de ação para o autor do comentário */}
-                      {comment.user_id === user.id && (
+                      {comment.user_id === user?.id && (
                         <div className="comment-actions">
                           {editingComment === comment.id ? (
                             <>
@@ -633,7 +633,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                                   </div>
                                   
                                   {/* Botões de ação para o autor da resposta */}
-                                  {reply.user_id === user.id && (
+                                  {reply.user_id === user?.id && (
                                     <div className="reply-actions">
                                       <button 
                                         onClick={() => handleDeleteReply(reply.id, comment.id)}

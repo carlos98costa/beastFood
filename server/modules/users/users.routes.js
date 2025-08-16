@@ -1,13 +1,15 @@
 const express = require('express');
 const usersController = require('./users.controller');
 const auth = require('../../middleware/auth');
+const optionalAuth = require('../../middleware/optional-auth');
 const { upload, handleUploadError } = require('../../middleware/upload');
 
 const router = express.Router();
 
 // Rotas públicas
 router.get('/profile/:username', usersController.getProfile.bind(usersController));
-router.get('/profile/:username/posts', usersController.getUserPosts.bind(usersController));
+// Usar autenticação opcional para permitir calcular user_liked quando houver token
+router.get('/profile/:username/posts', optionalAuth, usersController.getUserPosts.bind(usersController));
 router.get('/profile/:username/following', usersController.getFollowing.bind(usersController));
 router.get('/profile/:username/followers', usersController.getFollowers.bind(usersController));
 router.get('/search', usersController.searchUsers.bind(usersController));

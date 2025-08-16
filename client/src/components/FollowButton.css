@@ -14,12 +14,12 @@
 }
 
 .follow-button.not-following {
-  background: #1877f2;
+  background: var(--primary-color);
   color: white;
 }
 
 .follow-button.not-following:hover:not(:disabled) {
-  background: #166fe5;
+  background: #e55a2b;
   transform: translateY(-1px);
 }
 
@@ -78,21 +78,21 @@
 
 /* Variações de cor */
 .follow-button.primary {
-  background: #1877f2;
+  background: var(--primary-color);
   color: white;
 }
 
 .follow-button.primary:hover:not(:disabled) {
-  background: #166fe5;
+  background: #e55a2b;
 }
 
 .follow-button.secondary {
-  background: #42a5f5;
+  background: var(--secondary-color);
   color: white;
 }
 
 .follow-button.secondary:hover:not(:disabled) {
-  background: #1e88e5;
+  background: #e0851a;
 }
 
 .follow-button.success {

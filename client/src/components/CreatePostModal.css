@@ -49,8 +49,8 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #1877f2;
-  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
 }
 
 .search-results {
@@ -99,7 +99,7 @@
 }
 
 .select-hint {
-  color: #1877f2;
+  color: var(--primary-color);
   font-size: 12px;
   font-weight: 600;
 }
@@ -124,13 +124,13 @@
 }
 
 .restaurant-item:hover {
-  border-color: #1877f2;
+  border-color: var(--primary-color);
   transform: translateY(-1px);
 }
 
 .restaurant-item.selected {
-  border-color: #1877f2;
-  background: #f0f8ff;
+  border-color: var(--primary-color);
+  background: #fff3ec;
 }
 
 .restaurant-item:last-child {
@@ -138,13 +138,13 @@
 }
 
 .selected-icon {
-  color: #1877f2;
+  color: var(--primary-color);
   font-weight: bold;
   font-size: 18px;
 }
 
 .suggest-new-btn {
-  background: #42a5f5;
+  background: var(--secondary-color);
   color: white;
   border: none;
   padding: 12px 20px;
@@ -160,7 +160,7 @@
 }
 
 .suggest-new-btn:hover {
-  background: #1e88e5;
+  background: #e0851a;
 }
 
 /* Formulário de Novo Restaurante */
@@ -223,8 +223,8 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #1877f2;
-  box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
 }
 
 .form-group textarea {

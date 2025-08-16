@@ -292,16 +292,31 @@ const RestaurantDetail = () => {
     if (!user) return;
     
     try {
-      await axios.post(`/api/posts/${postId}/like`);
-      setPosts(prev => prev.map(post => 
-        post.id === postId 
-          ? { ...post, likes_count: (post.likes_count || 0) + 1, is_liked: true }
-          : post
-      ));
+      const post = posts.find(p => p.id === postId);
+      const isLiked = post?.user_liked || post?.is_liked;
+      if (isLiked) {
+        const response = await axios.delete(`/api/likes/${postId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setPosts(prev => prev.map(p => 
+          p.id === postId 
+            ? { ...p, likes_count: response.data.likes_count, user_liked: false, is_liked: false }
+            : p
+        ));
+      } else {
+        const response = await axios.post(`/api/likes/${postId}`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        setPosts(prev => prev.map(p => 
+          p.id === postId 
+            ? { ...p, likes_count: response.data.likes_count, user_liked: true, is_liked: true }
+            : p
+        ));
+      }
     } catch (error) {
-      console.error('Erro ao curtir post:', error);
+      console.error('Erro ao curtir/descurtir post:', error);
     }
-  }, [user]);
+  }, [user, posts]);
 
   // handleUnlike removido pois não estava sendo utilizado
 
@@ -606,10 +621,10 @@ const RestaurantDetail = () => {
 
                 <div className="post-actions">
                   <button 
-                    className={`action-button ${post.is_liked ? 'liked' : ''}`}
+                    className={`action-button ${(post.user_liked || post.is_liked) ? 'liked' : ''}`}
                     onClick={() => handleLike(post.id)}
                   >
-                    {post.is_liked ? (
+                    {(post.user_liked || post.is_liked) ? (
                       <FaHeart className="liked" />
                     ) : (
                       <FaRegHeart />

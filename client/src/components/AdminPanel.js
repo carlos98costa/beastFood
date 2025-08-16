@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FaUsers, FaUtensils, FaChartBar, FaCrown, FaEdit, FaUserPlus, FaUserMinus } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,26 +19,22 @@ const AdminPanel = ({ onClose }) => {
   const [showEditRestaurantModal, setShowEditRestaurantModal] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState(null);
 
-  // Criar instância do axios configurada para este componente
-  const adminAxios = axios.create({
+  // Criar instância do axios configurada para este componente (memoizada)
+  const adminAxios = useMemo(() => axios.create({
     baseURL: 'http://localhost:5000',
     headers: {
       'Content-Type': 'application/json'
     }
-  });
+  }), []);
 
   // Configurar token quando disponível
   useEffect(() => {
     if (token) {
       adminAxios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete adminAxios.defaults.headers.common['Authorization'];
     }
-  }, [token, adminAxios.defaults.headers.common]);
-
-  useEffect(() => {
-    if (token) {
-      fetchData();
-    }
-  }, [token, fetchData]);
+  }, [token, adminAxios]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -75,6 +71,12 @@ const AdminPanel = ({ onClose }) => {
       setLoading(false);
     }
   }, [token, adminAxios]);
+
+  useEffect(() => {
+    if (token) {
+      fetchData();
+    }
+  }, [token, fetchData]);
 
   const updateUserRole = async (userId, newRole) => {
     try {

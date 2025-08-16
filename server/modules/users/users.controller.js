@@ -55,13 +55,14 @@ class UsersController {
     try {
       const { username } = req.params;
       const { limit = 10, offset = 0 } = req.query;
+      const currentUserId = req.user?.id || null;
 
       const user = await usersService.findUserByUsername(username);
       if (!user) {
         return res.status(404).json({ error: 'Usuário não encontrado' });
       }
 
-      const posts = await usersService.getUserPosts(user.id, parseInt(limit), parseInt(offset));
+      const posts = await usersService.getUserPosts(user.id, parseInt(limit), parseInt(offset), currentUserId);
 
       res.json({ 
         user: { id: user.id, name: user.name, username: user.username },

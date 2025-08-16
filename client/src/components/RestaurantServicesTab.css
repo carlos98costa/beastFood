@@ -115,7 +115,7 @@
 }
 
 .save-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -131,7 +131,7 @@
 
 .save-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
 }
 
 .save-btn:disabled {
@@ -143,7 +143,7 @@
   background: #f8fafc;
   padding: 1.5rem;
   border-radius: 12px;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--primary-color);
 }
 
 .services-info h4 {
@@ -183,7 +183,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #e2e8f0;
-  border-top: 4px solid #3b82f6;
+  border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
@@ -327,7 +327,7 @@
 
 .add-service-modal .form-group input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--primary-color);
 }
 
 .add-service-modal .form-group small {

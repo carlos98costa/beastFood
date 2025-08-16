@@ -84,13 +84,13 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: white;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
 }
 
 .btn-secondary {
@@ -165,7 +165,7 @@ textarea {
 
 textarea:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--primary-color);
 }
 
 .form-actions {
@@ -218,7 +218,7 @@ textarea:focus {
 }
 
 .author-avatar-placeholder {
-  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
 }
 
 .author-info {
@@ -356,7 +356,7 @@ textarea:focus {
 }
 
 .edit-button:hover {
-  color: #3b82f6;
+  color: var(--primary-color);
 }
 
 .delete-button:hover {
@@ -404,7 +404,7 @@ textarea:focus {
   width: 40px;
   height: 40px;
   border: 4px solid #e5e7eb;
-  border-top: 4px solid #3b82f6;
+  border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;

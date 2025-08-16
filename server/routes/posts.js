@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
+const optionalAuth = require('../middleware/optional-auth');
 const { upload, handleUploadError } = require('../middleware/upload');
 
 const router = express.Router();
@@ -27,7 +28,7 @@ const processPosts = (posts) => {
 };
 
 // Buscar todos os posts (feed) - público (sem autenticação)
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { page = 1, limit = 10, restaurant_id, user_id } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
