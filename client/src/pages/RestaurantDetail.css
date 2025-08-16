@@ -47,6 +47,11 @@
   padding: 0 1rem;
 }
 
+/* Controla a proporção (largura/altura) das fotos nas avaliações desta página */
+.restaurant-detail-page {
+  --post-aspect: 1 / 1;
+}
+
 .posts-header {
   display: flex;
   justify-content: space-between;
@@ -171,9 +176,10 @@ textarea:focus {
 
 /* Lista de posts */
 .posts-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
+  justify-items: center;
 }
 
 .post-card {
@@ -181,6 +187,8 @@ textarea:focus {
   padding: 1.5rem;
   border-radius: 16px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: var(--post-card-max, 580px);
 }
 
 .post-header {
@@ -251,18 +259,30 @@ textarea:focus {
 /* Fotos dos posts */
 .post-photos {
   margin-bottom: 1rem;
+  width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .post-photo {
   width: 100%;
-  max-width: 400px;
-  height: auto;
+  height: 100%;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .post-photos-gallery {
   position: relative;
+  width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .photo-navigation {

@@ -108,129 +108,8 @@
   margin-bottom: 30px;
 }
 
-/* Cards de restaurante */
-.restaurant-card {
-  background: white;
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-  border: 1px solid #f0f0f0;
-}
-
-.restaurant-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-}
-
-.restaurant-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 15px;
-}
-
-.restaurant-name {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 600;
-}
-
-.restaurant-name a {
-  color: #333;
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-.restaurant-name a:hover {
-  color: #667eea;
-}
-
-.restaurant-rating {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: #f8f9fa;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.star-icon {
-  color: #ffc107;
-}
-
-.no-rating {
-  color: #999;
-  font-style: italic;
-}
-
-.restaurant-info {
-  margin-bottom: 15px;
-}
-
-.restaurant-address {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0;
-  color: #666;
-  font-size: 0.95rem;
-}
-
-.location-icon {
-  color: #667eea;
-  font-size: 0.9rem;
-}
-
-.restaurant-cuisine {
-  background: #e3f2fd;
-  color: #1976d2;
-  padding: 4px 12px;
-  border-radius: 15px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: inline-block;
-  margin: 5px 0;
-}
-
-.restaurant-description {
-  color: #666;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin: 10px 0;
-}
-
-.restaurant-stats {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #666;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.stat svg {
-  color: #667eea;
-}
-
-.restaurant-footer {
-  padding-top: 15px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.created-by {
-  color: #999;
-  font-size: 0.85rem;
-  font-style: italic;
-}
+/* Cards de restaurante: utilizar os mesmos estilos de Restaurants.css.
+   As regras antigas foram removidas para evitar conflito. */
 
 /* Cards de usuário */
 .user-card {
@@ -453,6 +332,9 @@
     font-size: 0.9rem;
   }
 }
+
+/* Ações do card */
+/* Botão de detalhes herdado como .view-restaurant-btn */
 
 @media (max-width: 480px) {
   .search-header {

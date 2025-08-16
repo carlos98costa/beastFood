@@ -6,7 +6,9 @@ const CreatePostModal = ({
   isOpen, 
   onClose, 
   onPostCreated,
-  currentUser 
+  currentUser,
+  preselectedRestaurant,
+  allowChangeRestaurant = false
 }) => {
   const [formData, setFormData] = useState({
     content: '',
@@ -24,10 +26,23 @@ const CreatePostModal = ({
   const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    // Pré-selecionar restaurante quando fornecido
+    if (preselectedRestaurant) {
+      setFormData(prev => ({
+        ...prev,
+        restaurant_id: preselectedRestaurant.id,
+        restaurant_name: preselectedRestaurant.name,
+        restaurant_address: preselectedRestaurant.address || '',
+        restaurant_url: ''
+      }));
+      setSuggestingNew(false);
+    }
+    // Buscar lista apenas quando o usuário puder trocar
+    if (!preselectedRestaurant || allowChangeRestaurant) {
       fetchRestaurants();
     }
-  }, [isOpen]);
+  }, [isOpen, preselectedRestaurant, allowChangeRestaurant]);
 
   const fetchRestaurants = async () => {
     try {
@@ -207,7 +222,12 @@ const CreatePostModal = ({
           <div className="form-section">
             <h3>Restaurante</h3>
             
-            {!suggestingNew ? (
+            {preselectedRestaurant && !allowChangeRestaurant ? (
+              <div className="selected-restaurant">
+                <strong>Restaurante Selecionado:</strong> {formData.restaurant_name}
+                {formData.restaurant_address && ` - ${formData.restaurant_address}`}
+              </div>
+            ) : !suggestingNew ? (
               <div className="restaurant-selection">
                 <div className="search-container">
                   <input
@@ -317,7 +337,7 @@ const CreatePostModal = ({
               </div>
             )}
 
-            {formData.restaurant_name && (
+            {formData.restaurant_name && (!preselectedRestaurant || allowChangeRestaurant) && (
               <div className="selected-restaurant">
                 <strong>Restaurante Selecionado:</strong> {formData.restaurant_name}
                 {formData.restaurant_address && ` - ${formData.restaurant_address}`}

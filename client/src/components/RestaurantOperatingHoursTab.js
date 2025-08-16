@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaClock, FaSave, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,30 +13,24 @@ const RestaurantOperatingHoursTab = ({ restaurant, onOperatingHoursUpdated }) =>
   const [currentStatus, setCurrentStatus] = useState(null);
 
   // Configurar axios com token
-  const restaurantAxios = axios.create({
+  const restaurantAxiosRef = useRef(axios.create({
     baseURL: 'http://localhost:5000',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000
+  }));
 
   useEffect(() => {
     if (token) {
-      restaurantAxios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      restaurantAxiosRef.current.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete restaurantAxiosRef.current.defaults.headers.common['Authorization'];
     }
   }, [token]);
-
-  useEffect(() => {
-    if (restaurant) {
-      loadOperatingHours();
-      loadCurrentStatus();
-    }
-  }, [restaurant, loadOperatingHours, loadCurrentStatus]);
 
   const loadOperatingHours = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await restaurantAxios.get(`/api/restaurant-features/${restaurant.id}/operating-hours`);
+      const response = await restaurantAxiosRef.current.get(`/api/restaurant-features/${restaurant.id}/operating-hours`);
       
       if (response.data.success) {
         setOperatingHours(response.data.operatingHours);
@@ -47,11 +41,11 @@ const RestaurantOperatingHoursTab = ({ restaurant, onOperatingHoursUpdated }) =>
     } finally {
       setLoading(false);
     }
-  }, [restaurant.id, restaurantAxios]);
+  }, [restaurant.id]);
 
   const loadCurrentStatus = useCallback(async () => {
     try {
-      const response = await restaurantAxios.get(`/api/restaurant-features/${restaurant.id}/status`);
+      const response = await restaurantAxiosRef.current.get(`/api/restaurant-features/${restaurant.id}/status`);
       
       if (response.data.success) {
         setCurrentStatus(response.data.status);
@@ -59,7 +53,14 @@ const RestaurantOperatingHoursTab = ({ restaurant, onOperatingHoursUpdated }) =>
     } catch (error) {
       console.error('Erro ao carregar status:', error);
     }
-  }, [restaurant.id, restaurantAxios]);
+  }, [restaurant.id]);
+
+  useEffect(() => {
+    if (restaurant?.id && token) {
+      loadOperatingHours();
+      loadCurrentStatus();
+    }
+  }, [restaurant?.id, token, loadOperatingHours, loadCurrentStatus]);
 
   const handleTimeChange = (dayOfWeek, field, value) => {
     setOperatingHours(prev => 
@@ -111,7 +112,7 @@ const RestaurantOperatingHoursTab = ({ restaurant, onOperatingHoursUpdated }) =>
         isClosed: hour.is_closed
       }));
       
-      const response = await restaurantAxios.put(
+      const response = await restaurantAxiosRef.current.put(
         `/api/restaurant-features/${restaurant.id}/operating-hours`,
         { operatingHours: hoursToSave }
       );

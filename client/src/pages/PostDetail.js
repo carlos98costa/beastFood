@@ -81,12 +81,12 @@ function PostDetail() {
 
   // Navegar para o restaurante
   const handleRestaurantClick = () => {
-    navigate(`/restaurants/${post.restaurant_id}`);
+    navigate(`/restaurant/${post.restaurant_id}`);
   };
 
-  // Navegar para o perfil do usuário
+  // Navegar para o perfil do usuário (usar username, não o id)
   const handleUserClick = () => {
-    navigate(`/profile/${post.user_id}`);
+    navigate(`/profile/${post.username}`);
   };
 
   if (loading) {

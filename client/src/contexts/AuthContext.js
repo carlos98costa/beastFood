@@ -7,7 +7,8 @@ axios.defaults.withCredentials = true; // Importante para enviar cookies
 axios.defaults.timeout = 5000; // Timeout de 5 segundos para ser mais responsivo
 // Otimizações adicionais
 axios.defaults.maxRedirects = 0; // Sem redirecionamentos
-axios.defaults.validateStatus = (status) => status < 500; // Aceitar apenas status < 500
+// Tratar 4xx como erro para permitir que o interceptor de 401 execute corretamente
+axios.defaults.validateStatus = (status) => status >= 200 && status < 300;
 
 // Interceptor para renovar token automaticamente em caso de erro 401
 axios.interceptors.response.use(
@@ -179,7 +180,7 @@ export function AuthProvider({ children }) {
   }, [isRefreshing, token, doLocalLogout]);
 
   const verifyToken = useCallback(async () => {
-    console.log('verifyToken chamada com:', { token: !!token, isVerifying, loading });
+    console.log('verifyToken chamada com:', { token: !!token, isVerifying });
     
     if (!token || isVerifying) {
       console.log('verifyToken: pulando verificação - sem token ou já verificando');
@@ -277,8 +278,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     console.log('useEffect inicialização - Executando:', { 
       hasToken: !!token, 
-      isInitialized: isInitialized.current,
-      loading 
+      isInitialized: isInitialized.current
     });
     
     if (token && !isInitialized.current) {
@@ -306,7 +306,7 @@ export function AuthProvider({ children }) {
         clearInterval(tokenCheckInterval.current);
       }
     };
-  }, []); // Executar apenas uma vez na inicialização
+  }, [token, verifyToken]);
 
   // useEffect adicional para garantir que loading seja false quando não há token
   useEffect(() => {

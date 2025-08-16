@@ -16,18 +16,49 @@ const Navbar = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-      setShowSuggestions(false);
-    }
+  const resolveUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setSearchQuery(suggestion);
-    navigate(`/search?q=${encodeURIComponent(suggestion)}`);
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const raw = searchQuery.trim();
+    if (!raw) return;
+
+    // Detecta intenções como "usuário car" ou "restaurante pizza"
+    let qParam = raw;
+    let typeParam = '';
+
+    const userMatch = raw.match(/^(usu[aá]rio|usuario)\s+(.+)$/i);
+    const restMatch = raw.match(/^(restaurante|restaurantes)\s+(.+)$/i);
+
+    if (userMatch) {
+      typeParam = 'users';
+      qParam = userMatch[2];
+    } else if (restMatch) {
+      typeParam = 'restaurants';
+      qParam = restMatch[2];
+    }
+
+    const url = typeParam
+      ? `/search?q=${encodeURIComponent(qParam)}&type=${typeParam}`
+      : `/search?q=${encodeURIComponent(qParam)}`;
+
+    navigate(url);
+    setSearchQuery('');
+    setShowSuggestions(false);
+  };
+
+  const handleSuggestionClick = (q, type) => {
+    setSearchQuery(q);
+    const url = type
+      ? `/search?q=${encodeURIComponent(q)}&type=${type}`
+      : `/search?q=${encodeURIComponent(q)}`;
+    navigate(url);
     setShowSuggestions(false);
   };
 
@@ -88,13 +119,13 @@ const Navbar = () => {
           
           {showSuggestions && searchQuery.trim().length >= 2 && (
             <div className="search-suggestions">
-              <div className="suggestion-item" onClick={() => handleSuggestionClick(`restaurante ${searchQuery}`)}>
+              <div className="suggestion-item" onClick={() => handleSuggestionClick(searchQuery, 'restaurants')}>
                 <FaUtensils /> Buscar restaurantes com "{searchQuery}"
               </div>
-              <div className="suggestion-item" onClick={() => handleSuggestionClick(`usuário ${searchQuery}`)}>
+              <div className="suggestion-item" onClick={() => handleSuggestionClick(searchQuery, 'users')}>
                 <FaUser /> Buscar usuários com "{searchQuery}"
               </div>
-              <div className="suggestion-item" onClick={() => handleSuggestionClick(`${searchQuery} restaurante`)}>
+              <div className="suggestion-item" onClick={() => handleSuggestionClick(searchQuery, 'restaurants')}>
                 <FaMapMarkerAlt /> Buscar restaurantes em "{searchQuery}"
               </div>
             </div>
@@ -131,7 +162,7 @@ const Navbar = () => {
                 >
                   {user.profile_picture ? (
                     <img 
-                      src={user.profile_picture} 
+                      src={resolveUrl(user.profile_picture)} 
                       alt={user.name}
                       className="user-avatar"
                     />

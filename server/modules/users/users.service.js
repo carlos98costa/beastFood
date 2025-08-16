@@ -129,7 +129,7 @@ class UsersService {
   // Verificar se um usuário segue outro
   async isFollowing(followerId, followingId) {
     const result = await pool.query(
-      'SELECT id FROM follows WHERE follower_id = $1 AND following_id = $2',
+      'SELECT 1 as exists FROM follows WHERE follower_id = $1 AND following_id = $2',
       [followerId, followingId]
     );
     return result.rows.length > 0;
@@ -145,7 +145,7 @@ class UsersService {
       `INSERT INTO follows (follower_id, following_id) 
        VALUES ($1, $2) 
        ON CONFLICT (follower_id, following_id) DO NOTHING
-       RETURNING id`,
+       RETURNING follower_id, following_id, created_at`,
       [followerId, followingId]
     );
     
@@ -155,7 +155,7 @@ class UsersService {
   // Deixar de seguir usuário
   async unfollowUser(followerId, followingId) {
     const result = await pool.query(
-      'DELETE FROM follows WHERE follower_id = $1 AND following_id = $2 RETURNING id',
+      'DELETE FROM follows WHERE follower_id = $1 AND following_id = $2 RETURNING follower_id, following_id',
       [followerId, followingId]
     );
     

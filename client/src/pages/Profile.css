@@ -290,15 +290,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 0 0 12px 0;
   border-bottom: 1px solid #e4e6eb;
-  max-width: 60%;
-  margin: 0 auto 0 auto;
-  background: white;
-  border-radius: 8px 8px 0 0;
-  border: 1px solid #e4e6eb;
-  border-bottom: none;
-  margin-bottom: 0;
+  max-width: var(--post-card-max, 580px);
+  margin: 0 auto 16px auto;
+  background: transparent;
+  border-radius: 0;
+  border: none;
 }
 
 .feed-header h2 {
@@ -316,16 +314,15 @@
   background: white;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
-  max-width: 60%;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: var(--post-card-max, 580px);
 }
 
-.profile-page .post-card:first-of-type {
-  border-radius: 0 0 8px 8px;
-  border-top: none;
-  margin-top: 0;
+/* Controla a proporção (largura/altura) das fotos no feed do perfil */
+.profile-page {
+  --post-aspect: 1 / 1;
 }
+
+.profile-page .post-card:first-of-type { }
 
 .profile-page .post-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -399,15 +396,20 @@
 
 .post-photos {
   margin: 15px 0;
+  width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f3f4f6;
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
 }
 
 .post-photo {
   width: 100%;
-  height: 300px;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
   border-radius: 8px;
   display: block;
 }
@@ -415,6 +417,10 @@
 .post-photos-gallery {
   position: relative;
   width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .photo-navigation {
@@ -624,13 +630,9 @@
     order: 1;
   }
   
-  .profile-page .post-card {
-    max-width: 80%;
-  }
+  .profile-page .post-card { }
   
-  .feed-header {
-    max-width: 80%;
-  }
+  .feed-header { }
   
   .profile-page .post-card:first-of-type {
     border-radius: 0 0 8px 8px;
@@ -675,10 +677,7 @@
     grid-template-columns: 1fr;
   }
   
-  .profile-page .post-card {
-    max-width: 90%;
-    margin: 0 auto 20px auto;
-  }
+  .profile-page .post-card { }
   
   .profile-page .post-card:first-of-type {
     border-radius: 0 0 8px 8px;
@@ -686,7 +685,6 @@
   }
   
   .feed-header {
-    max-width: 90%;
     margin: 0 auto;
     flex-direction: column;
     gap: 16px;
@@ -720,10 +718,7 @@
     gap: 8px;
   }
   
-  .profile-page .post-card {
-    max-width: 95%;
-    margin: 0 5px 20px 5px;
-  }
+  .profile-page .post-card { }
   
   .profile-page .post-card:first-of-type {
     border-radius: 0 0 8px 8px;

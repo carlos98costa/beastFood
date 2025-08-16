@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaEdit, FaTrash, FaHeart, FaRegHeart, FaComment } from 'react-icons/fa';
 import axios from 'axios';
@@ -12,6 +12,7 @@ import FollowButton from '../components/FollowButton';
 // defaultAvatar removido pois não estava sendo utilizado
 import defaultCover from '../assets/default-cover.svg';
 import './Profile.css';
+import './Home.css';
 
 function Profile() {
   const { username } = useParams();
@@ -33,10 +34,19 @@ function Profile() {
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [postToComment, setPostToComment] = useState(null);
 
+  // Normaliza URLs relativas de imagens para ambiente de desenvolvimento
+  const resolveUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
+  };
+
   // Determinar qual usuário mostrar (usuário logado ou usuário específico)
   const targetUsername = username || currentUser?.username;
   const isOwnProfile = !username || username === currentUser?.username;
-  const displayUser = profileUser || currentUser;
+  const displayUser = isOwnProfile ? (profileUser || currentUser) : profileUser;
 
   // Adicionar estado para controlar se já tentou buscar o perfil
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
@@ -56,13 +66,11 @@ function Profile() {
       setFollowersCount(response.data.user.followers_count || 0);
       setFollowingCount(response.data.user.following_count || 0);
       
-      // Verificar se o usuário atual está seguindo este perfil
+      // Verificar se o usuário atual está seguindo ESTE perfil (olhando os seguidores do perfil)
       if (currentUser && !isOwnProfile) {
         try {
-          const followResponse = await axios.get(`/api/users/profile/${targetUsername}/following`);
-          const isUserFollowing = followResponse.data.following.some(
-            user => user.id === currentUser.id
-          );
+          const followResponse = await axios.get(`/api/users/profile/${targetUsername}/followers`);
+          const isUserFollowing = followResponse.data.followers.some(user => user.id === currentUser.id);
           setIsFollowing(isUserFollowing);
         } catch (error) {
           console.error('Erro ao verificar status de seguindo:', error);
@@ -108,22 +116,25 @@ function Profile() {
     }
   }, [targetUsername, currentPage]);
 
+  // Buscar perfil e a primeira página de posts quando o username da rota mudar
   useEffect(() => {
-    console.log('Profile useEffect - targetUsername:', targetUsername, 'currentUser:', currentUser?.username, 'loading:', loading);
-    
-    // Só executar se tivermos um targetUsername e não estivermos já carregando
-    if (targetUsername && !loading && !hasAttemptedFetch) {
-      console.log('Executando fetchUserProfile e fetchUserPosts para:', targetUsername);
-      fetchUserProfile();
+    if (!targetUsername) return;
+    console.log('Carregando perfil para username:', targetUsername);
+    setHasAttemptedFetch(false);
+    setCurrentPage(1);
+    setProfileUser(null);
+    setUserPosts([]);
+    fetchUserProfile();
+    fetchUserPosts();
+  }, [targetUsername, fetchUserProfile, fetchUserPosts]);
+
+  // Buscar mais posts quando a página mudar
+  useEffect(() => {
+    if (!targetUsername) return;
+    if (currentPage > 1) {
       fetchUserPosts();
-    } else if (!targetUsername) {
-      console.log('Aguardando targetUsername...');
-    } else if (loading) {
-      console.log('Já carregando, aguardando...');
-    } else if (hasAttemptedFetch) {
-      console.log('Já tentou buscar, não executando novamente');
     }
-  }, [targetUsername, currentUser, loading, hasAttemptedFetch, fetchUserProfile, fetchUserPosts]);
+  }, [currentPage, targetUsername, fetchUserPosts]);
 
   const loadMorePosts = () => {
     if (!loading && hasMore) {
@@ -314,49 +325,75 @@ function Profile() {
     return stars;
   };
 
-  const renderPost = (post) => (
-    <div key={post.id} className="post-card">
-      <div className="post-header">
-        <div className="post-user-info">
-          {post.user_profile_picture ? (
-            <img 
-              src={post.user_profile_picture} 
-              alt={post.user_name}
-              className="post-user-avatar"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-          ) : null}
-          <div className="post-user-avatar default-avatar" style={{ display: post.user_profile_picture ? 'none' : 'flex' }}>
-            {post.user_name?.charAt(0)}
+  const renderPost = (post) => {
+    const profilePic = post.profile_picture || post.user_profile_picture;
+    const liked = post.user_liked || post.is_liked;
+    return (
+      <div key={post.id} className="post-card card hover-lift">
+        <div className="post-header">
+          <div className="post-user">
+            {profilePic ? (
+              <img 
+                src={resolveUrl(profilePic)} 
+                alt={post.user_name}
+                className="user-avatar"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className="user-avatar-placeholder" style={{ display: profilePic ? 'none' : 'flex' }}>
+              {post.user_name?.charAt(0)}
+            </div>
+            <div className="user-info">
+              <span className="user-name">{post.user_name}</span>
+              <span className="post-date">{formatDate(post.created_at)}</span>
+            </div>
           </div>
-          <div className="post-user-details">
-            <h4 className="post-user-name">{post.user_name}</h4>
-            <span className="post-restaurant">{post.restaurant_name}</span>
-            <span className="post-date">{formatDate(post.created_at)}</span>
+          <div className="post-header-actions">
+            {post.restaurant_name && post.restaurant_id && (
+              <div className="restaurant-link">
+                <Link to={`/restaurant/${post.restaurant_id}`}>
+                  {post.restaurant_name}
+                </Link>
+              </div>
+            )}
+            {currentUser && currentUser.id === post.user_id && (
+              <div className="post-actions-menu">
+                <button
+                  className="action-button edit-button"
+                  onClick={() => handleEditPost(post)}
+                  title="Editar post"
+                >
+                  <FaEdit />
+                </button>
+                <button
+                  className="action-button delete-button"
+                  onClick={() => handleDeletePost(post.id)}
+                  title="Deletar post"
+                >
+                  <FaTrash />
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-      
-      <div className="post-content">
-        <p className="post-text">{post.content}</p>
-        
+
         {post.photos && post.photos.length > 0 && (
-          <div className="post-photos">
+          <div className="post-images">
             {post.photos.length === 1 ? (
               <img 
-                src={post.photos[0].photo_url} 
-                alt="Foto do post"
-                className="post-photo"
+                src={resolveUrl(post.photos[0].photo_url)} 
+                alt="Post"
+                className="post-image"
               />
             ) : (
               <div className="post-photos-gallery">
                 <img 
-                  src={post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url} 
-                  alt="Foto do post"
-                  className="post-photo"
+                  src={resolveUrl(post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url)} 
+                  alt="Post"
+                  className="post-image"
                 />
                 {post.photos.length > 1 && (
                   <div className="photo-navigation">
@@ -383,20 +420,24 @@ function Profile() {
             )}
           </div>
         )}
-        
-        <div className="post-rating">
-          {renderStars(post.rating)}
-          <span className="rating-text">{post.rating.toFixed(1)}/5.0</span>
+
+        <div className="post-content">
+          {post.title && (
+            <h3 className="post-title">{post.title}</h3>
+          )}
+          <p className="post-text">{post.content}</p>
+          <div className="post-rating">
+            {renderStars(post.rating)}
+            <span className="rating-text">{post.rating.toFixed(1)}/5.0</span>
+          </div>
         </div>
-      </div>
-      
-      <div className="post-footer">
-        <div className="post-stats">
+
+        <div className="post-actions">
           <button 
-            className="action-button"
+            className={`action-button ${liked ? 'liked' : ''}`}
             onClick={() => handleLike(post.id)}
           >
-            {post.user_liked ? (
+            {liked ? (
               <FaHeart className="liked" />
             ) : (
               <FaRegHeart />
@@ -414,27 +455,9 @@ function Profile() {
             <span>{post.comments_count || 0}</span>
           </button>
         </div>
-        {currentUser && currentUser.id === post.user_id && (
-          <div className="post-actions-menu">
-            <button
-              className="action-button edit-button"
-              onClick={() => handleEditPost(post)}
-              title="Editar post"
-            >
-              <FaEdit />
-            </button>
-            <button
-              className="action-button delete-button"
-              onClick={() => handleDeletePost(post.id)}
-              title="Deletar post"
-            >
-              <FaTrash />
-            </button>
-          </div>
-        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   if (!displayUser) {
     return (
@@ -447,7 +470,7 @@ function Profile() {
   }
 
   return (
-    <div className="profile-page">
+    <div className="profile-page home-page">
       {/* Header do Perfil */}
       <div className="profile-header">
         <div className="profile-cover">
@@ -464,7 +487,7 @@ function Profile() {
               className="profile-cover-image"
               style={{
                 backgroundImage: displayUser.cover_picture 
-                  ? `url(${displayUser.cover_picture})` 
+                  ? `url(${resolveUrl(displayUser.cover_picture)})` 
                   : `url(${defaultCover})`
               }}
             />
@@ -483,7 +506,7 @@ function Profile() {
               <>
                 {displayUser.profile_picture ? (
                   <img 
-                    src={displayUser.profile_picture} 
+                    src={resolveUrl(displayUser.profile_picture)} 
                     alt={displayUser.name || displayUser.username}
                     className="profile-avatar"
                     onError={(e) => {
@@ -594,7 +617,7 @@ function Profile() {
             )}
           </div>
           
-          <div className="posts-feed">
+          <div className="posts-grid">
             {userPosts.length > 0 ? (
               userPosts.map(renderPost)
             ) : (

@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import './RestaurantCard.css';
 
 const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false, isLoggedIn = false }) => {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [shouldShowMore, setShouldShowMore] = useState(false);
+  const descriptionRef = useRef(null);
+  const servicesRef = useRef(null);
+  const highlightsRef = useRef(null);
   
   const {
     name = "Restaurante Exemplo",
@@ -18,7 +24,8 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
     status = "Fechado",
     nextOpen = "Abre às 11:00",
     photos = [],
-    isFavorite = false
+    isFavorite = false,
+    favoritesCount = 0
   } = restaurant || {};
 
   // Debug: log das fotos recebidas
@@ -40,7 +47,13 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
       drive_thru: 'Drive-thru',
       catering: 'Catering'
     };
-    return labels[serviceType] || serviceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (labels[serviceType]) return labels[serviceType];
+    const normalized = (serviceType || '')
+      .toString()
+      .replace(/_/g, ' ')
+      .trim()
+      .toLocaleLowerCase('pt-BR');
+    return normalized.replace(/(^|\s|\()([\p{L}])/gu, (m, sep, ch) => sep + ch.toLocaleUpperCase('pt-BR'));
   };
 
   // Função para construir URL completa das fotos
@@ -50,6 +63,22 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
     // Garantir que a URL seja construída corretamente
     return `http://localhost:5000${photoPath}`;
   };
+
+  // Verificar se algum bloco está truncado para exibir o botão "Ver mais"
+  useEffect(() => {
+    const checkOverflow = () => {
+      const descEl = descriptionRef.current;
+      const servEl = servicesRef.current;
+      const highEl = highlightsRef.current;
+      const descOverflow = descEl ? descEl.scrollHeight - 2 > descEl.clientHeight : false;
+      const servOverflow = servEl ? servEl.scrollHeight - 2 > servEl.clientHeight : false;
+      const highOverflow = highEl ? highEl.scrollHeight - 2 > highEl.clientHeight : false;
+      setShouldShowMore(descOverflow || servOverflow || highOverflow);
+    };
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [description, serviceOptions, highlights]);
 
   const renderStars = (rating) => {
     const stars = [];
@@ -105,13 +134,24 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
         {/* Header Section */}
         <div className="restaurant-header">
           <div className="header-content">
-            <h1 className="restaurant-name">{name}</h1>
+            <div className="restaurant-title">
+              <h1 className="restaurant-name">{name}</h1>
+              {isFavorite && (
+                <span className="favorite-chip" title="Este restaurante está nos seus favoritos">
+                  <FaHeart />
+                  Favorito
+                </span>
+              )}
+            </div>
             <div className="rating-section">
               <div className="rating-stars">
                 {renderStars(rating)}
               </div>
               <span className="rating-number">{rating}</span>
               <span className="review-count">{reviewCount} avaliações</span>
+              <span className="favorites-count" title="Número de usuários que favoritaram">
+                <FaHeart style={{ verticalAlign: 'middle' }} /> {favoritesCount || 0} favoritos
+              </span>
             </div>
           </div>
           
@@ -131,9 +171,13 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
                 className={`btn-favorite ${isFavorite ? 'active' : ''}`}
                 onClick={onToggleFavorite}
                 title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                aria-pressed={isFavorite}
+                aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
               >
-                <span className="icon">❤️</span>
-                {isFavorite ? 'Favorito' : 'Favorito'}
+                <span className={`icon-heart ${isFavorite ? 'filled' : 'outline'}`}>
+                  {isFavorite ? <FaHeart /> : <FaRegHeart />}
+                </span>
+                <span>{isFavorite ? 'Favorito' : 'Favoritar'}</span>
               </button>
             )}
           </div>
@@ -171,24 +215,35 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
           </div>
 
           {/* 2. Description Section - Seção central compacta */}
-          <div className="description-section">
-            <div className="description-box">
-              <p className="description-text">{description}</p>
+          <div className={`description-section ${isExpanded ? 'expanded' : ''}`}>
+            <div className={`description-box ${!isExpanded && shouldShowMore ? 'description-fade' : ''}`}>
+              <p ref={descriptionRef} className={`description-text ${isExpanded ? 'expanded' : ''}`}>{description}</p>
               
               <div className="service-options">
                 <h4>Opções de serviço:</h4>
-                <ul>
+                <ul ref={servicesRef}>
                   {serviceOptions.map((option, index) => (
                     <li key={index}>{getServiceLabel(option)}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className="highlights">
+              <div ref={highlightsRef} className="highlights">
                 {highlights.map((highlight, index) => (
                   <span key={index} className="highlight-tag">{highlight}</span>
                 ))}
               </div>
+              {shouldShowMore && (
+                <div className="show-more-container">
+                  <button
+                    type="button"
+                    className="show-more-btn"
+                    onClick={() => setIsExpanded(prev => !prev)}
+                  >
+                    {isExpanded ? 'Ver menos' : 'Ver mais'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

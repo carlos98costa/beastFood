@@ -26,8 +26,8 @@ const processPosts = (posts) => {
   }));
 };
 
-// Buscar todos os posts (feed)
-router.get('/', auth, async (req, res) => {
+// Buscar todos os posts (feed) - público (sem autenticação)
+router.get('/', async (req, res) => {
   try {
     const { page = 1, limit = 10, restaurant_id, user_id } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);

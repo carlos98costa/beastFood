@@ -4,6 +4,15 @@
   padding: 20px;
 }
 
+/* Controla a proporção (largura/altura) das fotos do feed */
+.home-page {
+  --post-aspect: 1 / 1;
+  --post-card-max: 580px; /* controle de largura do card */
+  --post-image-height: auto; /* altura fixa opcional; auto usa a proporção */
+  --post-card-padding: 20px; /* controle de padding do card */
+  --post-card-max-height: none; /* defina ex.: 620px para limitar a altura do card */
+}
+
 .hero-section {
   text-align: center;
   padding: 60px 20px;
@@ -98,16 +107,27 @@
 
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 20px;
+  justify-items: center;
+}
+
+/* Responsividade: afinar um pouco em telas muito estreitas */
+@media (max-width: 520px) {
+  .home-page {
+    --post-card-max: 92vw;
+  }
 }
 
 .home-page .post-card {
   background: #f8f9fa;
   border-radius: 10px;
-  padding: 20px;
+  padding: var(--post-card-padding, 20px);
   transition: transform 0.3s ease;
-  max-width: 100%;
+  width: 100%;
+  max-width: var(--post-card-max, 480px);
+  max-height: var(--post-card-max-height, none);
+  box-sizing: border-box;
 }
 
 .home-page .post-card:hover {
@@ -191,7 +211,7 @@
 }
 
 .post-content {
-  margin-bottom: 15px;
+  margin-bottom: 8px;
 }
 
 .post-content h5 {
@@ -209,24 +229,39 @@
 .post-rating {
   color: #ffc107;
   font-size: 1.1rem;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .post-images {
   margin-bottom: 15px;
   position: relative;
+  width: 100%;
+  /* Se --post-image-height for auto, usamos aspect-ratio; se receber um valor (ex.: 380px), usa altura fixa */
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  height: var(--post-image-height);
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .post-image {
   width: 100%;
-  height: 300px;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
   border-radius: 8px;
   display: block;
 }
 
 .post-photos-gallery {
   position: relative;
+  width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .photo-navigation {
@@ -272,9 +307,11 @@
 
 .post-actions {
   display: flex;
-  gap: 15px;
+  gap: 12px;
   font-size: 0.9rem;
   color: #666;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
 }
 
 .post-action {
@@ -615,11 +652,29 @@
 .posts-grid {
   display: grid;
   gap: 20px;
+  grid-template-columns: 1fr;
+  justify-items: center;
 }
 
 .home-page .post-card {
   padding: 20px;
-  max-width: 100%;
+  width: 100%;
+  max-width: var(--post-card-max, 480px);
+}
+
+/* Normalização de estilos quando reutilizamos o card do Home em outras páginas */
+.home-page .post-header {
+  border-bottom: none;
+  padding: 0;
+}
+
+.home-page .post-content {
+  padding: 0;
+}
+
+.home-page .post-card.card {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .post-content {
@@ -647,17 +702,31 @@
 
 .post-images {
   margin-bottom: 16px;
+  width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .post-image {
   width: 100%;
-  height: 300px;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
   border-radius: 8px;
 }
 
 .post-photos-gallery {
   position: relative;
+  width: 100%;
+  aspect-ratio: var(--post-aspect, 1 / 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .photo-navigation {

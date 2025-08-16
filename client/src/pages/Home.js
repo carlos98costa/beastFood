@@ -23,12 +23,6 @@ const Home = () => {
   // Declarar funções antes dos useEffect
   const fetchPosts = useCallback(async () => {
     try {
-      // Usar o token do contexto de autenticação
-      if (!token) {
-        console.log('Sem token de autenticação, não buscando posts');
-        return;
-      }
-
       const response = await axios.get('/api/posts?limit=10');
       setPosts(response.data.posts);
     } catch (error) {
@@ -39,7 +33,7 @@ const Home = () => {
         // Se falhar, o usuário será redirecionado para login
       }
     }
-  }, [token]);
+  }, []);
 
   const fetchRestaurants = useCallback(async () => {
     try {
@@ -54,10 +48,8 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    if (user && token) {
-      fetchPosts();
-    }
-  }, [user, token, fetchPosts]);
+    fetchPosts();
+  }, [fetchPosts]);
 
   useEffect(() => {
     fetchRestaurants();

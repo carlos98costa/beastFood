@@ -22,6 +22,14 @@ const ImageUpload = ({
   const defaultImage = type === 'avatar' ? defaultAvatar : defaultCover;
   // displayImage removido pois não estava sendo utilizado
 
+  const resolveUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
+  };
+
   const handleFileSelect = (file) => {
     if (!file) return;
 
@@ -139,7 +147,7 @@ const ImageUpload = ({
           </div>
         ) : currentImage ? (
           <div className="current-image">
-            <img src={currentImage} alt="Imagem atual" />
+            <img src={resolveUrl(currentImage)} alt="Imagem atual" />
             <div className="image-overlay">
               <div className="upload-icon">
                 {type === 'avatar' ? '📷' : '🖼️'}

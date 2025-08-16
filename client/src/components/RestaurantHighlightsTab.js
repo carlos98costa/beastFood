@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaPlus, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,30 +14,24 @@ const RestaurantHighlightsTab = ({ restaurant, onHighlightsUpdated }) => {
   const [newHighlight, setNewHighlight] = useState('');
 
   // Configurar axios com token
-  const restaurantAxios = axios.create({
+  const restaurantAxiosRef = useRef(axios.create({
     baseURL: 'http://localhost:5000',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000
+  }));
 
   useEffect(() => {
     if (token) {
-      restaurantAxios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      restaurantAxiosRef.current.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete restaurantAxiosRef.current.defaults.headers.common['Authorization'];
     }
   }, [token]);
-
-  useEffect(() => {
-    if (restaurant) {
-      loadHighlights();
-      loadAvailableHighlights();
-    }
-  }, [restaurant, loadHighlights, loadAvailableHighlights]);
 
   const loadHighlights = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await restaurantAxios.get(`/api/restaurant-features/${restaurant.id}/highlights`);
+      const response = await restaurantAxiosRef.current.get(`/api/restaurant-features/${restaurant.id}/highlights`);
       
       if (response.data.success) {
         setHighlights(response.data.highlights);
@@ -48,11 +42,11 @@ const RestaurantHighlightsTab = ({ restaurant, onHighlightsUpdated }) => {
     } finally {
       setLoading(false);
     }
-  }, [restaurant.id, restaurantAxios]);
+  }, [restaurant.id]);
 
   const loadAvailableHighlights = useCallback(async () => {
     try {
-      const response = await restaurantAxios.get('/api/restaurant-features/reference-data');
+      const response = await restaurantAxiosRef.current.get('/api/restaurant-features/reference-data');
       
       if (response.data.success) {
         setAvailableHighlights(response.data.data.defaultHighlights);
@@ -60,7 +54,14 @@ const RestaurantHighlightsTab = ({ restaurant, onHighlightsUpdated }) => {
     } catch (error) {
       console.error('Erro ao carregar highlights disponíveis:', error);
     }
-  }, [restaurantAxios]);
+  }, []);
+
+  useEffect(() => {
+    if (restaurant?.id && token) {
+      loadHighlights();
+      loadAvailableHighlights();
+    }
+  }, [restaurant?.id, token, loadHighlights, loadAvailableHighlights]);
 
   const addHighlight = (highlightText) => {
     if (!highlightText.trim()) return;
@@ -115,7 +116,7 @@ const RestaurantHighlightsTab = ({ restaurant, onHighlightsUpdated }) => {
         isActive: h.is_active
       }));
       
-      const response = await restaurantAxios.put(
+      const response = await restaurantAxiosRef.current.put(
         `/api/restaurant-features/${restaurant.id}/highlights`,
         { highlights: highlightsToSave }
       );

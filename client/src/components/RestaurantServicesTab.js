@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaTimes, FaSave, FaPlus } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,29 +15,24 @@ const RestaurantServicesTab = ({ restaurant, onServicesUpdated }) => {
   const [newServiceType, setNewServiceType] = useState('');
 
   // Configurar axios com token
-  const restaurantAxios = axios.create({
+  const restaurantAxiosRef = useRef(axios.create({
     baseURL: 'http://localhost:5000',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000
+  }));
 
   useEffect(() => {
     if (token) {
-      restaurantAxios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      restaurantAxiosRef.current.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete restaurantAxiosRef.current.defaults.headers.common['Authorization'];
     }
   }, [token]);
-
-  useEffect(() => {
-    if (restaurant) {
-      loadServices();
-    }
-  }, [restaurant, loadServices]);
 
   const loadServices = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await restaurantAxios.get(`/api/restaurant-features/${restaurant.id}/services/all`);
+      const response = await restaurantAxiosRef.current.get(`/api/restaurant-features/${restaurant.id}/services/all`);
       
       if (response.data.success) {
         setServices(response.data.services);
@@ -48,7 +43,13 @@ const RestaurantServicesTab = ({ restaurant, onServicesUpdated }) => {
     } finally {
       setLoading(false);
     }
-  }, [restaurant.id, restaurantAxios]);
+  }, [restaurant.id]);
+
+  useEffect(() => {
+    if (restaurant?.id && token) {
+      loadServices();
+    }
+  }, [restaurant?.id, token, loadServices]);
 
   const handleServiceToggle = (serviceType) => {
     setServices(prev => 
@@ -70,7 +71,7 @@ const RestaurantServicesTab = ({ restaurant, onServicesUpdated }) => {
       setSaving(true);
       setError(null);
 
-      const response = await restaurantAxios.post(
+      const response = await restaurantAxiosRef.current.post(
         `/api/restaurant-features/${restaurant.id}/services`,
         {
           serviceType: newServiceType,
@@ -122,7 +123,7 @@ const RestaurantServicesTab = ({ restaurant, onServicesUpdated }) => {
       setSaving(true);
       setError(null);
 
-      const response = await restaurantAxios.delete(
+      const response = await restaurantAxiosRef.current.delete(
         `/api/restaurant-features/${restaurant.id}/services/${serviceType}`
       );
 
@@ -159,7 +160,7 @@ const RestaurantServicesTab = ({ restaurant, onServicesUpdated }) => {
         isAvailable: service.is_available
       }));
       
-      const response = await restaurantAxios.put(
+      const response = await restaurantAxiosRef.current.put(
         `/api/restaurant-features/${restaurant.id}/services`,
         { services: servicesToSave }
       );
@@ -196,7 +197,14 @@ const RestaurantServicesTab = ({ restaurant, onServicesUpdated }) => {
       drive_thru: 'Drive-thru',
       catering: 'Catering'
     };
-    return labels[serviceType] || serviceType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    if (labels[serviceType]) return labels[serviceType];
+    const normalized = (serviceType || '')
+      .toString()
+      .replace(/_/g, ' ')
+      .trim()
+      .toLocaleLowerCase('pt-BR');
+    // Title-case com suporte a Unicode (acentos)
+    return normalized.replace(/(^|\s|\()([\p{L}])/gu, (m, sep, ch) => sep + ch.toLocaleUpperCase('pt-BR'));
   };
 
   const isDefaultService = (serviceType) => {

@@ -14,15 +14,18 @@ import {
 } from 'react-icons/fa';
 import axios from 'axios';
 import EditPostModal from '../components/EditPostModal';
+import CreatePostModal from '../components/CreatePostModal';
 import CommentsModal from '../components/CommentsModal';
 import EditRestaurantModal from '../components/EditRestaurantModal';
 import RestaurantCard from '../components/RestaurantCard';
 import './RestaurantDetail.css';
+import './Home.css';
 
 const RestaurantDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const [restaurant, setRestaurant] = useState(null);
+  const [favoritesCount, setFavoritesCount] = useState(0);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -51,6 +54,9 @@ const RestaurantDetail = () => {
     try {
       const response = await axios.get(`/api/restaurants/${id}`);
       setRestaurant(response.data.restaurant);
+      // Garantir contador de favoritos
+      const count = parseInt(response.data.restaurant?.favorites_count || 0, 10);
+      setFavoritesCount(Number.isNaN(count) ? 0 : count);
       
       // Buscar serviços da API de features
       try {
@@ -193,11 +199,13 @@ const RestaurantDetail = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         setIsFavorite(false);
+        setFavoritesCount(prev => Math.max(0, (prev || 0) - 1));
       } else {
-        await axios.post(`/api/restaurants/favorites`, { restaurant_id: id }, {
+        await axios.post(`/api/restaurants/favorites`, { restaurantId: id }, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         setIsFavorite(true);
+        setFavoritesCount(prev => (prev || 0) + 1);
       }
     } catch (error) {
       console.error('Erro ao alternar favorito:', error);
@@ -363,13 +371,14 @@ const RestaurantDetail = () => {
       status: restaurantStatus.isOpen ? "Aberto" : "Fechado",
       nextOpen: restaurantStatus.nextOpen,
       photos: photos,
-      isFavorite: isFavorite
+      isFavorite: isFavorite,
+      favoritesCount: favoritesCount
     };
     
     console.log('🔍 Debug restaurantCardData - resultado final:', result);
     console.log('🔍 Debug restaurantCardData - status final:', result.status);
     return result;
-  }, [restaurant, isFavorite, restaurantServices, restaurantHighlights, restaurantStatus]);
+  }, [restaurant, isFavorite, restaurantServices, restaurantHighlights, restaurantStatus, favoritesCount]);
 
   const renderStars = (rating) => {
     return [...Array(5)].map((_, index) => (
@@ -436,7 +445,7 @@ const RestaurantDetail = () => {
   }
 
   return (
-    <div className="restaurant-detail-page">
+    <div className="restaurant-detail-page home-page">
       {/* Header com navegação */}
       <div className="detail-header">
         <Link to="/restaurants" className="back-button">
@@ -462,7 +471,7 @@ const RestaurantDetail = () => {
           <h2>Avaliações e Experiências</h2>
           {user && (
             <button
-              onClick={() => setShowCreatePost(!showCreatePost)}
+              onClick={() => setShowCreatePost(true)}
               className="btn btn-primary"
             >
               <FaPlus />
@@ -471,107 +480,92 @@ const RestaurantDetail = () => {
           )}
         </div>
 
-        {/* Formulário para criar nova avaliação */}
-        {showCreatePost && (
-          <div className="create-post-form">
-            <h3>Nova Avaliação</h3>
-            <form onSubmit={handleCreatePost}>
-
-
-              <div className="form-group">
-                <label>Avaliação:</label>
-                <div className="rating-input">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setNewPost({...newPost, rating: star})}
-                      className={`star-button ${star <= newPost.rating ? 'active' : ''}`}
-                    >
-                      <FaStar />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Conteúdo:</label>
-                <textarea
-                  value={newPost.content}
-                  onChange={(e) => setNewPost({...newPost, content: e.target.value})}
-                  placeholder="Conte sua experiência neste restaurante..."
-                  rows="4"
-                  required
-                />
-              </div>
-
-
-
-              <div className="form-actions">
-                <button type="submit" className="btn btn-primary">
-                  Publicar Avaliação
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreatePost(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
+        {/* Modal de Nova Avaliação (mesmo modal do + Novo Post) */}
+        {showCreatePost && user && (
+          <CreatePostModal
+            isOpen={showCreatePost}
+            onClose={() => setShowCreatePost(false)}
+            onPostCreated={(created) => {
+              setPosts(prev => [created, ...prev]);
+              setShowCreatePost(false);
+            }}
+            currentUser={user}
+            preselectedRestaurant={{
+              id: restaurant.id,
+              name: restaurant.name,
+              address: restaurant.address
+            }}
+            allowChangeRestaurant={false}
+          />
         )}
 
         {/* Lista de posts */}
-        <div className="posts-list">
+        <div className="posts-grid">
           {posts.length > 0 ? (
             posts.map(post => (
-              <div key={post.id} className="post-card">
+              <div key={post.id} className="post-card card hover-lift">
                 <div className="post-header">
-                  <div className="post-author">
+                  <div className="post-user">
                     {post.profile_picture ? (
                       <img 
                         src={post.profile_picture} 
                         alt={post.user_name}
-                        className="author-avatar"
+                        className="user-avatar"
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
                         }}
                       />
                     ) : null}
-                    <div className="author-avatar-placeholder" style={{ display: post.profile_picture ? 'none' : 'flex' }}>
+                    <div className="user-avatar-placeholder" style={{ display: post.profile_picture ? 'none' : 'flex' }}>
                       {post.user_name?.charAt(0)}
                     </div>
-                    <div className="author-info">
-                      <span className="author-name">{post.user_name}</span>
+                    <div className="user-info">
+                      <span className="user-name">{post.user_name}</span>
                       <span className="post-date">{formatDate(post.created_at)}</span>
                     </div>
                   </div>
-                  <div className="post-rating">
-                    {renderStars(post.rating)}
+                  <div className="post-header-actions">
+                    <div className="restaurant-link">
+                      <Link to={`/restaurant/${restaurant.id}`}>
+                        {restaurant.name}
+                      </Link>
+                    </div>
+                    {user && user.id === post.user_id && (
+                      <div className="post-actions-menu">
+                        <button
+                          className="action-button edit-button"
+                          onClick={() => handleEditPost(post)}
+                          title="Editar post"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          className="action-button delete-button"
+                          onClick={() => handleDeletePost(post.id)}
+                          title="Deletar post"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-
-
-                <p className="post-content">{post.content}</p>
-
                 {post.photos && post.photos.length > 0 && (
-                  <div className="post-photos">
+                  <div className="post-images">
                     {post.photos.length === 1 ? (
                       <img 
                         src={post.photos[0].photo_url} 
-                        alt="Foto do post"
-                        className="post-photo"
+                        alt="Post"
+                        className="post-image"
                       />
                     ) : (
                       <div className="post-photos-gallery">
                         <img 
                           src={post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url} 
-                          alt="Foto do post"
-                          className="post-photo"
+                          alt="Post"
+                          className="post-image"
                         />
                         {post.photos.length > 1 && (
                           <div className="photo-navigation">
@@ -599,9 +593,20 @@ const RestaurantDetail = () => {
                   </div>
                 )}
 
+                <div className="post-content">
+                  {post.title && (
+                    <h3 className="post-title">{post.title}</h3>
+                  )}
+                  <p className="post-text">{post.content}</p>
+                  <div className="post-rating">
+                    {renderStars(post.rating)}
+                    <span className="rating-text">{post.rating.toFixed(1)}/5.0</span>
+                  </div>
+                </div>
+
                 <div className="post-actions">
                   <button 
-                    className="action-button"
+                    className={`action-button ${post.is_liked ? 'liked' : ''}`}
                     onClick={() => handleLike(post.id)}
                   >
                     {post.is_liked ? (
@@ -618,24 +623,6 @@ const RestaurantDetail = () => {
                     <FaComment />
                     <span>{post.comments_count || 0}</span>
                   </button>
-                  {user && user.id === post.user_id && (
-                    <div className="post-actions-menu">
-                      <button
-                        className="action-button edit-button"
-                        onClick={() => handleEditPost(post)}
-                        title="Editar post"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        className="action-button delete-button"
-                        onClick={() => handleDeletePost(post.id)}
-                        title="Deletar post"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             ))

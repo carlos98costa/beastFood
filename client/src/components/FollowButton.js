@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './FollowButton.css';
 
@@ -11,6 +11,11 @@ const FollowButton = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [following, setFollowing] = useState(isFollowing);
+
+  // Sincronizar estado interno quando a prop mudar (ex.: outra instância alterou)
+  useEffect(() => {
+    setFollowing(isFollowing);
+  }, [isFollowing]);
 
   const handleFollowToggle = async () => {
     if (loading) return;

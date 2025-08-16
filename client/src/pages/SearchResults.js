@@ -3,21 +3,27 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { FaUtensils, FaUser, FaStar, FaHeart, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
 import axios from 'axios';
 import './SearchResults.css';
+import './Restaurants.css';
 
 function SearchResults() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q');
+  const trimmedQuery = (query || '').trim();
   const [searchResults, setSearchResults] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Sincroniza a aba ativa com o parâmetro `type` da URL
   useEffect(() => {
-    if (query) {
-      performSearch();
+    const typeParam = searchParams.get('type');
+    const normalized = (typeParam === 'users' || typeParam === 'restaurants') ? typeParam : 'all';
+    if (normalized !== activeTab) {
+      setActiveTab(normalized);
+      setCurrentPage(1);
     }
-  }, [query, activeTab, currentPage, performSearch]);
+  }, [searchParams, activeTab]);
 
   const performSearch = useCallback(async () => {
     try {
@@ -25,7 +31,7 @@ function SearchResults() {
       setError(null);
 
       const params = {
-        q: query,
+        q: trimmedQuery,
         type: activeTab,
         page: currentPage,
         limit: 20
@@ -39,11 +45,27 @@ function SearchResults() {
     } finally {
       setLoading(false);
     }
-  }, [query, activeTab, currentPage]);
+  }, [trimmedQuery, activeTab, currentPage]);
+
+  useEffect(() => {
+    if (trimmedQuery && trimmedQuery.length >= 2) {
+      performSearch();
+    }
+  }, [trimmedQuery, activeTab, currentPage, performSearch]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setCurrentPage(1);
+    // Atualiza a URL para refletir a aba selecionada
+    const next = new URLSearchParams(searchParams);
+    next.set('q', query || '');
+    if (tab === 'all') {
+      next.delete('type');
+    } else {
+      next.set('type', tab);
+    }
+    next.set('page', '1');
+    setSearchParams(next);
   };
 
   const handlePageChange = (page) => {
@@ -57,60 +79,82 @@ function SearchResults() {
     const hasHalfStar = rating % 1 !== 0;
 
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<FaStar key={i} className="star filled" />);
+      stars.push(<FaStar key={i} className="star filled star" />);
     }
 
     if (hasHalfStar) {
-      stars.push(<FaStar key="half" className="star half" />);
+      stars.push(<FaStar key="half" className="star half star" />);
     }
 
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
     for (let i = 0; i < emptyStars; i++) {
-      stars.push(<FaStar key={`empty-${i}`} className="star empty" />);
+      stars.push(<FaStar key={`empty-${i}`} className="star empty star" />);
     }
 
     return stars;
   };
 
+  const renderPriceRange = (price) => {
+    if (!price || price < 1 || price > 5) {
+      return 'Preço não informado';
+    }
+    return '$'.repeat(price);
+  };
+
   const renderRestaurantCard = (restaurant) => (
     <div key={restaurant.id} className="restaurant-card">
-      <div className="restaurant-header">
-        <h3 className="restaurant-name">
-          <Link to={`/restaurant/${restaurant.id}`}>
-            {restaurant.name}
-          </Link>
-        </h3>
-        {restaurant.average_rating ? (
-          <div className="restaurant-rating">
-            {renderStars(restaurant.average_rating)}
-            <span>{parseFloat(restaurant.average_rating).toFixed(1)}/5.0</span>
-          </div>
-        ) : null}
-      </div>
-      
-      <div className="restaurant-info">
-        <p className="restaurant-address">
-          <FaMapMarkerAlt className="location-icon" />
-          {restaurant.address}
-        </p>
-        {restaurant.description && (
-          <p className="restaurant-description">{restaurant.description}</p>
+      <div className="restaurant-header-main">
+        <h3 className="restaurant-name-main">{restaurant.name || 'Nome não informado'}</h3>
+        {restaurant.cuisine_type && (
+          <span className="restaurant-cuisine-main">{restaurant.cuisine_type}</span>
         )}
       </div>
-      
+
       <div className="restaurant-stats">
-        <span className="stat">
-          <FaUtensils /> {restaurant.posts_count || 0} posts
-        </span>
-        <span className="stat">
-          <FaHeart /> {restaurant.favorites_count || 0} favoritos
-        </span>
+        <div className="stat-item">
+          <div className="stat-icon">⭐</div>
+          <div className="stat-content">
+            <div className="stat-value">
+              {restaurant.average_rating ? `${restaurant.average_rating}/5.0` : 'Sem avaliação'}
+            </div>
+            <div className="stat-label">
+              {restaurant.posts_count ? `${restaurant.posts_count} avaliações` : 'Nenhuma avaliação'}
+            </div>
+          </div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon">❤️</div>
+          <div className="stat-content">
+            <div className="stat-value">{restaurant.favorites_count || 0}</div>
+            <div className="stat-label">Favoritos</div>
+          </div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-icon">💰</div>
+          <div className="stat-content">
+            <div className="stat-value">{renderPriceRange(restaurant.price_range)}</div>
+            <div className="stat-label">Faixa de preço</div>
+          </div>
+        </div>
       </div>
-      
+
+      {restaurant.address && (
+        <div className="restaurant-location-main">
+          <FaMapMarkerAlt className="location-icon" />
+          <span className="location-text">{restaurant.address}</span>
+        </div>
+      )}
+
+      {restaurant.description && (
+        <div className="restaurant-description-main">
+          <p>{restaurant.description}</p>
+        </div>
+      )}
+
       <div className="restaurant-footer">
-        <span className="created-by">
-          Criado por: {restaurant.created_by_username}
-        </span>
+        <Link to={`/restaurant/${restaurant.id}`} className="view-restaurant-btn">
+          Ver Detalhes
+        </Link>
       </div>
     </div>
   );
@@ -210,13 +254,25 @@ function SearchResults() {
     );
   };
 
-  if (!query) {
+  if (!trimmedQuery) {
     return (
       <div className="search-results-container">
         <div className="no-query">
           <FaSearch className="search-icon" />
           <h2>Digite algo para buscar</h2>
           <p>Use a barra de busca para encontrar restaurantes e usuários</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (trimmedQuery.length < 2) {
+    return (
+      <div className="search-results-container">
+        <div className="no-query">
+          <FaSearch className="search-icon" />
+          <h2>Digite pelo menos 2 caracteres</h2>
+          <p>Sua busca atual tem apenas {trimmedQuery.length} caractere{trimmedQuery.length !== 1 ? 's' : ''}.</p>
         </div>
       </div>
     );
@@ -256,7 +312,7 @@ function SearchResults() {
       <div className="search-header">
         <h1>Resultados da Busca</h1>
         <p className="search-query">
-          Buscando por: <strong>"{query}"</strong>
+          Buscando por: <strong>"{trimmedQuery}"</strong>
         </p>
         <p className="total-results">
           {totalResults} resultado{totalResults !== 1 ? 's' : ''} encontrado{totalResults !== 1 ? 's' : ''}

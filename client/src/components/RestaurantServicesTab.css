@@ -399,6 +399,8 @@
   color: #495057;
   cursor: pointer;
   user-select: none;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* Botão de deletar */

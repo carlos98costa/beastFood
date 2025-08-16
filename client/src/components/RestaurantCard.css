@@ -36,12 +36,30 @@
   flex: 1;
 }
 
+.restaurant-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .restaurant-name {
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 0.75rem 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   letter-spacing: -0.5px;
+}
+
+.favorite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.8rem;
 }
 
 .rating-section {
@@ -84,6 +102,18 @@
 .review-count {
   font-size: 0.85rem;
   opacity: 0.9;
+}
+
+.favorites-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 /* Header Actions */
@@ -131,6 +161,17 @@
 .btn-favorite.active {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.icon-heart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.btn-favorite.active .icon-heart {
+  transform: scale(1.05);
 }
 
 /* Main Content - Layout Horizontal Compacto */
@@ -230,6 +271,9 @@
   padding: 0 0.75rem;
 }
 
+/* Quando expandido, liberar limites */
+.description-section.expanded {}
+
 .description-box {
   background: #f8fafc;
   padding: 1.5rem;
@@ -247,6 +291,17 @@
   line-height: 1.6;
   font-size: 1rem;
   text-align: justify;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.description-text.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  overflow: visible;
 }
 
 .service-options h4 {
@@ -260,6 +315,13 @@
   margin: 0 0 0.75rem 0;
   padding-left: 1.25rem;
   color: #6b7280;
+  max-height: 64px;
+  overflow: hidden;
+}
+
+.description-section.expanded .service-options ul {
+  max-height: none;
+  overflow: visible;
 }
 
 .service-options li {
@@ -272,6 +334,50 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: auto;
+  max-height: 64px;
+  overflow: hidden;
+}
+
+.description-section.expanded .highlights {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Fade na borda inferior quando truncado */
+.description-fade {
+  position: relative;
+}
+
+.description-fade::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, #f8fafc 60%);
+}
+
+/* Botão Ver mais */
+.show-more-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.show-more-btn {
+  align-self: flex-end;
+  margin-top: -8px;
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.show-more-btn:hover {
+  text-decoration: underline;
 }
 
 .highlight-tag {
@@ -579,6 +685,8 @@
   
   .description-section {
     padding: 0;
+    max-height: none;
+    overflow: visible;
   }
   
   .details-section, .status-section {
@@ -589,6 +697,18 @@
   
   .detail-item, .status-box, .reviews-box {
     flex: 1;
+  }
+  .description-text {
+    display: block;
+    -webkit-line-clamp: unset;
+  }
+  .service-options ul {
+    max-height: none;
+    overflow: visible;
+  }
+  .highlights {
+    max-height: none;
+    overflow: visible;
   }
 }
 
