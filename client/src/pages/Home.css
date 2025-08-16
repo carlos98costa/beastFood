@@ -6,11 +6,17 @@
 
 /* Controla a proporção (largura/altura) das fotos do feed */
 .home-page {
+  /* Variáveis de controle visual */
   --post-aspect: 1 / 1;
   --post-card-max: 580px; /* controle de largura do card */
   --post-image-height: auto; /* altura fixa opcional; auto usa a proporção */
   --post-card-padding: 20px; /* controle de padding do card */
   --post-card-max-height: none; /* defina ex.: 620px para limitar a altura do card */
+
+  /* Limitar largura e centralizar a página para dar sensação de app desktop */
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .hero-section {
