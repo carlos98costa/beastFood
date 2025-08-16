@@ -134,11 +134,10 @@ function Register() {
           </button>
         </form>
 
-        <div className="register-divider">
-          <span>ou</span>
-        </div>
+        <span style={{ display: 'block', textAlign: 'center', margin: '15px 0' }}>ou</span>
 
-        <GoogleLogin
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
           onSuccess={(user) => {
             toast.success(`Bem-vindo, ${user.name}!`);
             navigate('/');
@@ -148,7 +147,8 @@ function Register() {
           }}
           buttonText="Criar conta com Google"
           className="google-login-full"
-        />
+          />
+        </div>
 
         <div className="register-footer">
           <p>

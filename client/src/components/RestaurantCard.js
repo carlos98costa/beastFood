@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import './RestaurantCard.css';
 
-const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false, isLoggedIn = false }) => {
+const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, onHoursClick, canEdit = false, isLoggedIn = false }) => {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -267,7 +267,7 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, canEdit = false,
 
           {/* 4. Status Section - Horário e Avaliações */}
           <div className="status-section">
-            <div className="status-box">
+            <div className="status-box" onClick={onHoursClick} style={{ cursor: 'pointer' }}>
               <div className="status-header">
                 <span>Horário</span>
                 <span className="arrow">→</span>

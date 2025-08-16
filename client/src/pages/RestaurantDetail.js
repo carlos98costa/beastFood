@@ -18,6 +18,7 @@ import CreatePostModal from '../components/CreatePostModal';
 import CommentsModal from '../components/CommentsModal';
 import EditRestaurantModal from '../components/EditRestaurantModal';
 import RestaurantCard from '../components/RestaurantCard';
+import OperatingHoursModal from '../components/OperatingHoursModal';
 import './RestaurantDetail.css';
 import './Home.css';
 
@@ -44,6 +45,8 @@ const RestaurantDetail = () => {
   const [restaurantServices, setRestaurantServices] = useState([]);
   const [restaurantHighlights, setRestaurantHighlights] = useState([]);
   const [restaurantStatus, setRestaurantStatus] = useState({ isOpen: false, nextOpen: "Abre às 11:00" });
+  const [showHoursModal, setShowHoursModal] = useState(false);
+  const [operatingHours, setOperatingHours] = useState([]);
 
   // Debug: log do estado inicial
   console.log('🔍 Debug - Estado inicial restaurantStatus:', { isOpen: false, nextOpen: "Abre às 11:00" });
@@ -103,8 +106,9 @@ const RestaurantDetail = () => {
           try {
             const hoursResponse = await axios.get(`/api/restaurant-features/${id}/operating-hours`);
             if (hoursResponse.data.success) {
-              const operatingHours = hoursResponse.data.operatingHours;
-              console.log('🔍 Debug - Horários de funcionamento:', operatingHours);
+              const fetchedOperatingHours = hoursResponse.data.operatingHours;
+              setOperatingHours(fetchedOperatingHours);
+              console.log('🔍 Debug - Horários de funcionamento:', fetchedOperatingHours);
               
               // Encontrar o próximo dia que abre
               const today = new Date().getDay(); // 0 = Domingo, 1 = Segunda, etc.
@@ -114,7 +118,7 @@ const RestaurantDetail = () => {
               // Procurar nos próximos 7 dias
               for (let i = 0; i < 7; i++) {
                 const dayToCheck = (today + i) % 7;
-                const dayHours = operatingHours.find(h => h.day_of_week === dayToCheck);
+                const dayHours = fetchedOperatingHours.find(h => h.day_of_week === dayToCheck);
                 
                 if (dayHours && !dayHours.is_closed) {
                   nextOpenDay = dayToCheck;
@@ -477,6 +481,7 @@ const RestaurantDetail = () => {
           onEdit={handleEditRestaurant}
           canEdit={canEditRestaurant}
           isLoggedIn={!!user}
+          onHoursClick={() => setShowHoursModal(true)}
         />
       </div>
 
@@ -706,6 +711,16 @@ const RestaurantDetail = () => {
           isOpen={showEditRestaurantModal}
           onClose={handleCloseEditModal}
           onRestaurantUpdated={handleRestaurantUpdated}
+        />
+      )}
+
+      {/* Modal de Horários de Funcionamento */}
+      {showHoursModal && (
+        <OperatingHoursModal
+          isOpen={showHoursModal}
+          onClose={() => setShowHoursModal(false)}
+          operatingHours={operatingHours}
+          restaurantName={restaurant?.name}
         />
       )}
     </div>

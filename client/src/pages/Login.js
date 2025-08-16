@@ -84,21 +84,21 @@ function Login() {
           </button>
         </form>
 
-        <div className="login-divider">
-          <span>ou</span>
-        </div>
+        <span style={{ display: 'block', textAlign: 'center', margin: '15px 0' }}>ou</span>
 
-        <GoogleLogin
-          onSuccess={(user) => {
-            toast.success(`Bem-vindo, ${user.name}!`);
-            navigate('/');
-          }}
-          onError={(error) => {
-            toast.error(error);
-          }}
-          buttonText="Entrar com Google"
-          className="google-login-full"
-        />
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={(user) => {
+              toast.success(`Bem-vindo, ${user.name}!`);
+              navigate('/');
+            }}
+            onError={(error) => {
+              toast.error(error);
+            }}
+            buttonText="Entrar com Google"
+            className="google-login-full"
+          />
+        </div>
 
         <div className="login-footer">
           <p>
