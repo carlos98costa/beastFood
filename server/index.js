@@ -30,6 +30,7 @@ const restaurantRoutes = require('./routes/restaurants');
 const restaurantPhotosRoutes = require('./modules/restaurants/restaurant-photos.routes');
 const restaurantFeaturesRoutes = require('./modules/restaurants/restaurant-features.routes');
 const notificationsRoutes = require('./modules/notifications/notifications.routes');
+const pendingRestaurantsRoutes = require('./modules/pending-restaurants/pending-restaurants.routes');
 const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const likeRoutes = require('./routes/likes');
@@ -152,6 +153,7 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/restaurant-photos', restaurantPhotosRoutes);
 app.use('/api/restaurant-features', restaurantFeaturesRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/pending-restaurants', pendingRestaurantsRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
@@ -219,6 +221,7 @@ app.use('*', (req, res) => {
       '/api/restaurants',
       '/api/restaurant-photos',
       '/api/restaurant-features',
+      '/api/pending-restaurants',
       '/api/posts',
       '/api/comments',
       '/api/likes',

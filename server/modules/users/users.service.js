@@ -6,10 +6,12 @@ class UsersService {
     const result = await pool.query(
       `SELECT u.id, u.name, u.username, u.email, u.bio, u.profile_picture, u.cover_picture, u.created_at,
               COUNT(DISTINCT f1.following_id) as following_count,
-              COUNT(DISTINCT f2.follower_id) as followers_count
+              COUNT(DISTINCT f2.follower_id) as followers_count,
+              COUNT(DISTINCT p.id) as posts_count
        FROM users u
        LEFT JOIN follows f1 ON u.id = f1.follower_id
        LEFT JOIN follows f2 ON u.id = f2.following_id
+       LEFT JOIN posts p ON u.id = p.user_id
        WHERE u.username = $1
        GROUP BY u.id`,
       [username]
@@ -22,10 +24,12 @@ class UsersService {
     const result = await pool.query(
       `SELECT u.id, u.name, u.username, u.email, u.bio, u.profile_picture, u.cover_picture, u.created_at,
               COUNT(DISTINCT f1.following_id) as following_count,
-              COUNT(DISTINCT f2.follower_id) as followers_count
+              COUNT(DISTINCT f2.follower_id) as followers_count,
+              COUNT(DISTINCT p.id) as posts_count
        FROM users u
        LEFT JOIN follows f1 ON u.id = f1.follower_id
-       LEFT JOIN follows f2 ON u.id = f2.following_id
+       LEFT JOIN follows f2 ON u.id = f2.follower_id
+       LEFT JOIN posts p ON u.id = p.user_id
        WHERE u.id = $1
        GROUP BY u.id`,
       [userId]

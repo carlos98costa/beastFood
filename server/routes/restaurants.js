@@ -6,15 +6,15 @@ const { requireOwnerOrAdmin } = require('../middleware/admin');
 const { upload } = require('../middleware/upload');
 const restaurantsController = require('../modules/restaurants/restaurants.controller');
 
-// Função para converter data para UTC-3 (Brasília)
+// Função para converter data de UTC para UTC-3 (Brasília)
 const convertToBrasiliaTime = (date) => {
   if (!date) return date;
   
   // Se a data já é uma string, converter para Date
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   
-  // Converter para UTC-3
-  const brasiliaTime = new Date(dateObj.getTime() - (3 * 60 * 60 * 1000));
+  // Converter de UTC para UTC-3 (Brasília)
+  const brasiliaTime = new Date(dateObj.getTime() + (3 * 60 * 60 * 1000));
   
   return brasiliaTime.toISOString();
 };

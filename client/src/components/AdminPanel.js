@@ -1,25 +1,28 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { FaUsers, FaUtensils, FaChartBar, FaCrown, FaEdit, FaUserPlus, FaUserMinus } from 'react-icons/fa';
+import { FaUsers, FaUtensils, FaChartBar, FaCrown, FaEdit, FaUserPlus, FaUserMinus, FaClock, FaCheck, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import EditRestaurantModal from './EditRestaurantModal';
 import CreateRestaurantModal from './CreateRestaurantModal';
 import './AdminPanel.css';
 
-const AdminPanel = ({ onClose }) => {
+const AdminPanel = ({ onClose, initialTab = 'stats' }) => {
   const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState('stats');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
+  const [pendingRestaurants, setPendingRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedPendingRestaurant, setSelectedPendingRestaurant] = useState(null);
   // Modal de usuário removido pois não estava sendo utilizado
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showEditRestaurantModal, setShowEditRestaurantModal] = useState(false);
   const [showCreateRestaurantModal, setShowCreateRestaurantModal] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState(null);
+  const [adminNotes, setAdminNotes] = useState('');
 
   // Criar instância do axios configurada para este componente (memoizada)
   const adminAxios = useMemo(() => axios.create({
@@ -55,15 +58,17 @@ const AdminPanel = ({ onClose }) => {
         }
       };
 
-      const [statsRes, usersRes, restaurantsRes] = await Promise.all([
+      const [statsRes, usersRes, restaurantsRes, pendingRestaurantsRes] = await Promise.all([
         adminAxios.get('/api/admin/stats', config),
         adminAxios.get('/api/admin/users', config),
-        adminAxios.get('/api/admin/restaurants', config)
+        adminAxios.get('/api/admin/restaurants', config),
+        adminAxios.get('/api/pending-restaurants', config)
       ]);
 
       setStats(statsRes.data.stats);
       setUsers(usersRes.data.users);
       setRestaurants(restaurantsRes.data.restaurants);
+      setPendingRestaurants(pendingRestaurantsRes.data.pendingRestaurants || []);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       if (error.response?.status === 401) {
@@ -164,6 +169,62 @@ const AdminPanel = ({ onClose }) => {
   const handleRestaurantCreated = (createdRestaurant) => {
     setRestaurants(prev => [createdRestaurant, ...prev]);
     fetchData();
+  };
+
+  const approvePendingRestaurant = async (pendingRestaurantId) => {
+    try {
+      if (!token) {
+        alert('Token não encontrado');
+        return;
+      }
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      await adminAxios.put(`/api/pending-restaurants/${pendingRestaurantId}/approve`, 
+        { adminNotes }, config);
+      
+      await fetchData(); // Recarregar dados
+      alert('Restaurante aprovado com sucesso!');
+      setAdminNotes('');
+      setSelectedPendingRestaurant(null);
+    } catch (error) {
+      console.error('Erro ao aprovar restaurante:', error);
+      alert('Erro ao aprovar restaurante');
+    }
+  };
+
+  const rejectPendingRestaurant = async (pendingRestaurantId) => {
+    try {
+      if (!token) {
+        alert('Token não encontrado');
+        return;
+      }
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      };
+
+      await adminAxios.put(`/api/pending-restaurants/${pendingRestaurantId}/reject`, 
+        { adminNotes }, config);
+      
+      await fetchData(); // Recarregar dados
+      alert('Restaurante rejeitado com sucesso!');
+      setAdminNotes('');
+      setSelectedPendingRestaurant(null);
+    } catch (error) {
+      console.error('Erro ao rejeitar restaurante:', error);
+      alert('Erro ao rejeitar restaurante');
+    }
+  };
+
+  const viewPendingRestaurantDetails = (pendingRestaurant) => {
+    setSelectedPendingRestaurant(pendingRestaurant);
   };
 
   const renderStats = () => (
@@ -357,6 +418,146 @@ const AdminPanel = ({ onClose }) => {
     </div>
   );
 
+  const renderPendingRestaurants = () => (
+    <div className="admin-pending-restaurants">
+      <h3>⏳ Restaurantes Pendentes de Aprovação</h3>
+      
+      {pendingRestaurants.length === 0 ? (
+        <div className="no-pending">
+          <p>Nenhum restaurante pendente de aprovação.</p>
+        </div>
+      ) : (
+        <div className="pending-restaurants-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Restaurante</th>
+                <th>Sugerido por</th>
+                <th>Endereço</th>
+                <th>Avaliação</th>
+                <th>Data</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingRestaurants.map(pending => (
+                <tr key={pending.id}>
+                  <td>
+                    <div className="pending-restaurant-info">
+                      <span className="restaurant-name">{pending.name}</span>
+                      {pending.description && (
+                        <p className="restaurant-description">{pending.description}</p>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="user-info">
+                      <span className="username">{pending.suggested_by_username}</span>
+                      <span className="user-name">({pending.suggested_by_name})</span>
+                    </div>
+                  </td>
+                  <td>{pending.address}</td>
+                  <td>
+                    <div className="rating">
+                      <span className="rating-stars">{'★'.repeat(pending.post_rating)}</span>
+                      <span className="rating-number">({pending.post_rating}/5)</span>
+                    </div>
+                  </td>
+                  <td>{new Date(pending.created_at).toLocaleDateString('pt-BR')}</td>
+                  <td>
+                    <div className="pending-actions">
+                      <button
+                        onClick={() => viewPendingRestaurantDetails(pending)}
+                        className="action-btn view-btn"
+                        title="Ver detalhes"
+                      >
+                        👁️ Ver
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal de detalhes do restaurante pendente */}
+      {selectedPendingRestaurant && (
+        <div className="modal-overlay">
+          <div className="modal pending-details-modal">
+            <h3>Detalhes da Sugestão: {selectedPendingRestaurant.name}</h3>
+            
+            <div className="pending-details">
+              <div className="detail-section">
+                <h4>Informações do Restaurante</h4>
+                <p><strong>Nome:</strong> {selectedPendingRestaurant.name}</p>
+                <p><strong>Descrição:</strong> {selectedPendingRestaurant.description || 'Não informada'}</p>
+                <p><strong>Endereço:</strong> {selectedPendingRestaurant.address}</p>
+                {selectedPendingRestaurant.cuisine_type && (
+                  <p><strong>Tipo de Culinária:</strong> {selectedPendingRestaurant.cuisine_type}</p>
+                )}
+                {selectedPendingRestaurant.price_range && (
+                  <p><strong>Faixa de Preço:</strong> {selectedPendingRestaurant.price_range}</p>
+                )}
+                {selectedPendingRestaurant.phone_number && (
+                  <p><strong>Telefone:</strong> {selectedPendingRestaurant.phone_number}</p>
+                )}
+                {selectedPendingRestaurant.website && (
+                  <p><strong>Website:</strong> <a href={selectedPendingRestaurant.website} target="_blank" rel="noopener noreferrer">{selectedPendingRestaurant.website}</a></p>
+                )}
+              </div>
+
+              <div className="detail-section">
+                <h4>Avaliação do Usuário</h4>
+                <p><strong>Nota:</strong> {selectedPendingRestaurant.post_rating}/5</p>
+                <p><strong>Conteúdo:</strong> {selectedPendingRestaurant.post_content}</p>
+                <p><strong>Sugerido por:</strong> {selectedPendingRestaurant.suggested_by_name} (@{selectedPendingRestaurant.suggested_by_username})</p>
+                <p><strong>Data da sugestão:</strong> {new Date(selectedPendingRestaurant.created_at).toLocaleDateString('pt-BR')}</p>
+              </div>
+
+              <div className="detail-section">
+                <h4>Observações do Administrador</h4>
+                <textarea
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  placeholder="Adicione observações sobre a aprovação/rejeição..."
+                  className="admin-notes"
+                />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                onClick={() => approvePendingRestaurant(selectedPendingRestaurant.id)}
+                className="action-btn approve-btn"
+                title="Aprovar restaurante"
+              >
+                <FaCheck /> Aprovar
+              </button>
+              <button
+                onClick={() => rejectPendingRestaurant(selectedPendingRestaurant.id)}
+                className="action-btn reject-btn"
+                title="Rejeitar restaurante"
+              >
+                <FaTimes /> Rejeitar
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedPendingRestaurant(null);
+                  setAdminNotes('');
+                }}
+                className="cancel-btn"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="admin-panel-overlay">
@@ -394,12 +595,22 @@ const AdminPanel = ({ onClose }) => {
           >
             <FaUtensils /> Restaurantes
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pending')}
+          >
+            <FaClock /> Pendentes
+            {pendingRestaurants.length > 0 && (
+              <span className="pending-badge">{pendingRestaurants.length}</span>
+            )}
+          </button>
         </div>
 
         <div className="admin-content">
           {activeTab === 'stats' && renderStats()}
           {activeTab === 'users' && renderUsers()}
           {activeTab === 'restaurants' && renderRestaurants()}
+          {activeTab === 'pending' && renderPendingRestaurants()}
         </div>
 
         {/* Modal para definir dono do restaurante */}

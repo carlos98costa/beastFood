@@ -17,6 +17,7 @@ const Navbar = () => {
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminPanelTab, setAdminPanelTab] = useState('stats');
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -126,7 +127,11 @@ const Navbar = () => {
       }
 
       // Navegar conforme o tipo
-      if (n.post_id) {
+      if (n.type === 'new_restaurant_suggestion') {
+        // Abrir o painel administrativo para aprovação na aba de restaurantes pendentes
+        setAdminPanelTab('pending');
+        setShowAdminPanel(true);
+      } else if (n.post_id) {
         navigate(`/post/${n.post_id}`);
       } else if (n.type === 'user_followed' && n.actor_username) {
         navigate(`/profile/${n.actor_username}`);
@@ -162,6 +167,12 @@ const Navbar = () => {
         return `${actor} curtiu seu comentário`;
       case 'user_followed':
         return `${actor} começou a te seguir`;
+      case 'new_restaurant_suggestion':
+        return `Nova sugestão de restaurante: ${n.data?.restaurant_name || 'Restaurante'}`;
+      case 'restaurant_approved':
+        return `Restaurante "${n.data?.restaurant_name || 'Restaurante'}" foi aprovado!`;
+      case 'restaurant_rejected':
+        return `Restaurante "${n.data?.restaurant_name || 'Restaurante'}" foi rejeitado`;
       default:
         return 'Nova atividade';
     }
@@ -280,10 +291,13 @@ const Navbar = () => {
                 )}
               </div>
               
-              {/* Botão do Painel Administrativo */}
+                            {/* Botão do Painel Administrativo */}
               {user?.role === 'admin' && (
-                <button 
-                  onClick={() => setShowAdminPanel(true)}
+                <button
+                  onClick={() => {
+                    setAdminPanelTab('stats');
+                    setShowAdminPanel(true);
+                  }}
                   className="nav-link admin-button"
                   title="Painel Administrativo"
                 >
@@ -376,7 +390,7 @@ const Navbar = () => {
 
       {/* Painel Administrativo */}
       {showAdminPanel && (
-        <AdminPanel onClose={() => setShowAdminPanel(false)} />
+        <AdminPanel onClose={() => setShowAdminPanel(false)} initialTab={adminPanelTab} />
       )}
     </nav>
   );

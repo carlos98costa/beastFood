@@ -18,6 +18,15 @@ const CreatePostModal = ({
     restaurant_address: '',
     restaurant_url: ''
   });
+  const [restaurantSuggestion, setRestaurantSuggestion] = useState({
+    name: '',
+    description: '',
+    address: '',
+    cuisine_type: '',
+    price_range: '',
+    phone_number: '',
+    website: ''
+  });
   const [photos, setPhotos] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -160,31 +169,39 @@ const CreatePostModal = ({
     setLoading(true);
 
     try {
-      let restaurantId = formData.restaurant_id;
-
-      // Se sugerindo novo restaurante, criar primeiro
-      if (suggestingNew && !restaurantId) {
-        const restaurantResponse = await axios.post('/api/restaurants', {
-          name: formData.restaurant_name,
-          address: formData.restaurant_address,
-          description: `Restaurante sugerido por ${currentUser.username}`
-        });
-        restaurantId = restaurantResponse.data.restaurant.id;
-      }
-
       let photoUrls = [];
       
       if (photos.length > 0) {
         photoUrls = await uploadPhotos();
       }
 
-      // Criar o post
-      const postResponse = await axios.post('/api/posts', {
-        restaurant_id: restaurantId,
-        content: formData.content,
-        rating: formData.rating,
-        photos: photoUrls
-      });
+      let postResponse;
+
+      if (suggestingNew && !formData.restaurant_id) {
+        // Criar post como sugestão de restaurante
+        postResponse = await axios.post('/api/posts', {
+          content: formData.content,
+          rating: formData.rating,
+          photos: photoUrls,
+          restaurant_suggestion: {
+            name: formData.restaurant_name,
+            description: restaurantSuggestion.description,
+            address: formData.restaurant_address,
+            cuisine_type: restaurantSuggestion.cuisine_type,
+            price_range: restaurantSuggestion.price_range,
+            phone_number: restaurantSuggestion.phone_number,
+            website: restaurantSuggestion.website
+          }
+        });
+      } else {
+        // Post normal com restaurante existente
+        postResponse = await axios.post('/api/posts', {
+          restaurant_id: formData.restaurant_id,
+          content: formData.content,
+          rating: formData.rating,
+          photos: photoUrls
+        });
+      }
 
       onPostCreated(postResponse.data.post);
       onClose();
@@ -197,6 +214,15 @@ const CreatePostModal = ({
         restaurant_name: '',
         restaurant_address: '',
         restaurant_url: ''
+      });
+      setRestaurantSuggestion({
+        name: '',
+        description: '',
+        address: '',
+        cuisine_type: '',
+        price_range: '',
+        phone_number: '',
+        website: ''
       });
       setPhotos([]);
       setSuggestingNew(false);
@@ -325,6 +351,100 @@ const CreatePostModal = ({
                   <small className="form-hint">
                     Cole aqui o link do Google Maps, site oficial ou busca do Google
                   </small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="restaurant_description">Descrição</label>
+                  <textarea
+                    id="restaurant_description"
+                    name="restaurant_description"
+                    value={restaurantSuggestion.description}
+                    onChange={(e) => setRestaurantSuggestion(prev => ({
+                      ...prev,
+                      description: e.target.value
+                    }))}
+                    placeholder="Descreva o tipo de culinária, ambiente, etc..."
+                    rows="3"
+                    maxLength="500"
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="cuisine_type">Tipo de Culinária</label>
+                    <select
+                      id="cuisine_type"
+                      name="cuisine_type"
+                      value={restaurantSuggestion.cuisine_type}
+                      onChange={(e) => setRestaurantSuggestion(prev => ({
+                        ...prev,
+                        cuisine_type: e.target.value
+                      }))}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Italiana">Italiana</option>
+                      <option value="Japonesa">Japonesa</option>
+                      <option value="Chinesa">Chinesa</option>
+                      <option value="Mexicana">Mexicana</option>
+                      <option value="Brasileira">Brasileira</option>
+                      <option value="Árabe">Árabe</option>
+                      <option value="Indiana">Indiana</option>
+                      <option value="Francesa">Francesa</option>
+                      <option value="Americana">Americana</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="price_range">Faixa de Preço</label>
+                    <select
+                      id="price_range"
+                      name="price_range"
+                      value={restaurantSuggestion.price_range}
+                      onChange={(e) => setRestaurantSuggestion(prev => ({
+                        ...prev,
+                        price_range: e.target.value
+                      }))}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="$">$ - Econômico</option>
+                      <option value="$$">$$ - Moderado</option>
+                      <option value="$$$">$$$ - Caro</option>
+                      <option value="$$$$">$$$$ - Muito Caro</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="phone_number">Telefone</label>
+                    <input
+                      type="tel"
+                      id="phone_number"
+                      name="phone_number"
+                      value={restaurantSuggestion.phone_number}
+                      onChange={(e) => setRestaurantSuggestion(prev => ({
+                        ...prev,
+                        phone_number: e.target.value
+                      }))}
+                      placeholder="Ex: (11) 99999-9999"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="website">Website</label>
+                    <input
+                      type="url"
+                      id="website"
+                      name="website"
+                      value={restaurantSuggestion.website}
+                      onChange={(e) => setRestaurantSuggestion(prev => ({
+                        ...prev,
+                        website: e.target.value
+                      }))}
+                      placeholder="Ex: https://www.restaurante.com"
+                    />
+                  </div>
                 </div>
 
                 <button

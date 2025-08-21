@@ -50,14 +50,20 @@ async function ensureNotificationsTable() {
     );
     CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(user_id, is_read);
+    CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
   `);
 }
 
-async function createNotification({ userId, actorId, type, postId = null, commentId = null, data = {} }) {
+async function createNotification({ userId, actorId, type, postId = null, commentId = null, pendingRestaurantId = null, data = {} }) {
   // Garantir que a tabela exista antes de inserir
   await ensureNotificationsTable();
   if (!userId || !type) return null;
   if (actorId && userId === actorId) return null; // não notificar ações do próprio usuário
+
+  // Se pendingRestaurantId for fornecido, incluí-lo no data JSONB
+  if (pendingRestaurantId) {
+    data = { ...data, pending_restaurant_id: pendingRestaurantId };
+  }
 
   const result = await pool.query(
     `INSERT INTO notifications (user_id, actor_id, type, post_id, comment_id, data)

@@ -13,7 +13,13 @@ class UsersController {
         return res.status(404).json({ error: 'Usuário não encontrado' });
       }
 
-      res.json({ user });
+      // Buscar posts do usuário (primeira página)
+      const posts = await usersService.getUserPosts(user.id, 10, 0, req.user?.id || null);
+
+      res.json({ 
+        user,
+        posts 
+      });
       
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);

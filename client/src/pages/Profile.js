@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaEdit, FaTrash, FaHeart, FaRegHeart, FaComment } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaHeart, FaRegHeart, FaComment, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import axios from 'axios';
 import ImageUpload from '../components/ImageUpload';
 import EditProfileModal from '../components/EditProfileModal';
@@ -36,6 +36,9 @@ function Profile() {
   const [postToComment, setPostToComment] = useState(null);
   const [showFollowModal, setShowFollowModal] = useState(false);
   const [followModalType, setFollowModalType] = useState('followers');
+  const [pendingRestaurants, setPendingRestaurants] = useState([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [showPendingRestaurantsModal, setShowPendingRestaurantsModal] = useState(false);
 
   // Normaliza URLs relativas de imagens para ambiente de desenvolvimento
   const resolveUrl = (url) => {
@@ -79,6 +82,12 @@ function Profile() {
           console.error('Erro ao verificar status de seguindo:', error);
         }
       }
+      
+      // Buscar restaurantes pendentes se for o próprio perfil
+      if (isOwnProfile) {
+        fetchPendingRestaurants();
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
@@ -92,6 +101,21 @@ function Profile() {
       setLoading(false);
     }
   }, [targetUsername, navigate, currentUser, isOwnProfile]);
+
+  // Buscar restaurantes pendentes do usuário
+  const fetchPendingRestaurants = useCallback(async () => {
+    if (!currentUser) return;
+    
+    try {
+      setLoadingPending(true);
+      const response = await axios.get('/api/pending-restaurants/user/me');
+      setPendingRestaurants(response.data.pendingRestaurants || []);
+    } catch (error) {
+      console.error('Erro ao buscar restaurantes pendentes:', error);
+    } finally {
+      setLoadingPending(false);
+    }
+  }, [currentUser]);
 
   const fetchUserPosts = useCallback(async () => {
     if (!targetUsername) return;
@@ -461,6 +485,104 @@ function Profile() {
     );
   };
 
+  // Renderizar restaurante pendente
+  const renderPendingRestaurant = (restaurant) => {
+    const getStatusIcon = (status) => {
+      switch (status) {
+        case 'pending':
+          return <FaClock className="status-icon pending" title="Aguardando aprovação" />;
+        case 'approved':
+          return <FaCheckCircle className="status-icon approved" title="Aprovado" />;
+        case 'rejected':
+          return <FaTimesCircle className="status-icon rejected" title="Rejeitado" />;
+        default:
+          return <FaClock className="status-icon pending" title="Aguardando aprovação" />;
+      }
+    };
+
+    const getStatusText = (status) => {
+      switch (status) {
+        case 'pending':
+          return 'Aguardando aprovação';
+        case 'approved':
+          return 'Aprovado';
+        case 'rejected':
+          return 'Rejeitado';
+        default:
+          return 'Aguardando aprovação';
+      }
+    };
+
+    const getStatusClass = (status) => {
+      switch (status) {
+        case 'pending':
+          return 'pending';
+        case 'approved':
+          return 'approved';
+        case 'rejected':
+          return 'rejected';
+        default:
+          return 'pending';
+      }
+    };
+
+    return (
+      <div key={restaurant.id} className={`pending-restaurant-card ${getStatusClass(restaurant.status)}`}>
+        <div className="pending-restaurant-header">
+          <div className="restaurant-info">
+            <h4 className="restaurant-name">{restaurant.name}</h4>
+            <p className="restaurant-address">{restaurant.address}</p>
+          </div>
+          <div className="status-info">
+            {getStatusIcon(restaurant.status)}
+            <span className={`status-text ${getStatusClass(restaurant.status)}`}>
+              {getStatusText(restaurant.status)}
+            </span>
+          </div>
+        </div>
+        
+        <div className="restaurant-details">
+          {restaurant.description && (
+            <p className="restaurant-description">{restaurant.description}</p>
+          )}
+          <div className="restaurant-meta">
+            {restaurant.cuisine_type && (
+              <span className="meta-item">
+                <strong>Tipo:</strong> {restaurant.cuisine_type}
+              </span>
+            )}
+            {restaurant.price_range && (
+              <span className="meta-item">
+                <strong>Preço:</strong> {restaurant.price_range}
+              </span>
+            )}
+            {restaurant.phone_number && (
+              <span className="meta-item">
+                <strong>Telefone:</strong> {restaurant.phone_number}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {restaurant.admin_notes && (
+          <div className="admin-notes">
+            <strong>Observações do administrador:</strong>
+            <p>{restaurant.admin_notes}</p>
+          </div>
+        )}
+
+        <div className="post-preview">
+          <h5>Avaliação associada:</h5>
+          <p className="post-content">{restaurant.post_content}</p>
+          <div className="post-rating">
+            {renderStars(restaurant.post_rating)}
+            <span className="rating-text">{restaurant.post_rating.toFixed(1)}/5.0</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (!displayUser) {
     return (
       <div className="profile-container">
@@ -612,6 +734,43 @@ function Profile() {
               />
             </div>
           )}
+
+          {/* Seção de Restaurantes Pendentes - apenas para o próprio perfil */}
+          {isOwnProfile && pendingRestaurants.length > 0 && (
+            <div className="sidebar-section">
+              <h3>Restaurantes Pendentes</h3>
+              <div className="pending-restaurants-list">
+                {pendingRestaurants.map(restaurant => (
+                  <div key={restaurant.id} className="pending-restaurant-item">
+                    <div className="restaurant-name">{restaurant.name}</div>
+                    <div className="restaurant-status">
+                      {restaurant.status === 'pending' && (
+                        <span className="status pending">
+                          <FaClock /> Aguardando
+                        </span>
+                      )}
+                      {restaurant.status === 'approved' && (
+                        <span className="status approved">
+                          <FaCheckCircle /> Aprovado
+                        </span>
+                      )}
+                      {restaurant.status === 'rejected' && (
+                        <span className="status rejected">
+                          <FaTimesCircle /> Rejeitado
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button 
+                className="view-all-pending-btn"
+                onClick={() => setShowPendingRestaurantsModal(true)}
+              >
+                Ver Todos os Detalhes
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="profile-main">
@@ -721,6 +880,41 @@ function Profile() {
         username={displayUser?.username}
         type={followModalType}
       />
+
+      {/* Modal de Restaurantes Pendentes */}
+      {showPendingRestaurantsModal && (
+        <div className="modal-overlay" onClick={() => setShowPendingRestaurantsModal(false)}>
+          <div className="modal-content pending-restaurants-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Meus Restaurantes Pendentes</h2>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowPendingRestaurantsModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              {loadingPending ? (
+                <div className="loading-message">
+                  <div className="spinner"></div>
+                  <p>Carregando restaurantes pendentes...</p>
+                </div>
+              ) : pendingRestaurants.length > 0 ? (
+                <div className="pending-restaurants-grid">
+                  {pendingRestaurants.map(renderPendingRestaurant)}
+                </div>
+              ) : (
+                <div className="no-pending-restaurants">
+                  <div className="no-pending-icon">🍽️</div>
+                  <h3>Nenhum restaurante pendente</h3>
+                  <p>Você ainda não sugeriu nenhum restaurante ou todos foram processados.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
