@@ -39,7 +39,7 @@ router.get('/', optionalAuth, async (req, res) => {
              u.username, u.name as user_name, u.profile_picture,
              r.name as restaurant_name, r.address,
              COUNT(DISTINCT l.user_id) as likes_count,
-             COUNT(DISTINCT c.id) as comments_count,
+             COUNT(DISTINCT CASE WHEN c.parent_comment_id IS NULL THEN c.id END) as comments_count,
              EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as user_liked
       FROM posts p
       JOIN users u ON p.user_id = u.id
@@ -76,10 +76,10 @@ router.get('/', optionalAuth, async (req, res) => {
 
     const posts = await pool.query(query, queryParams);
 
-    // Buscar fotos para cada post
+    // Buscar fotos para cada post (retornar objetos { id, photo_url } para consistência)
     for (let post of posts.rows) {
       const photos = await pool.query(
-        'SELECT * FROM post_photos WHERE post_id = $1 ORDER BY uploaded_at ASC',
+        'SELECT id, photo_url FROM post_photos WHERE post_id = $1 ORDER BY uploaded_at ASC',
         [post.id]
       );
       post.photos = photos.rows;
@@ -126,39 +126,42 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
-// Buscar post por ID
-router.get('/:id', async (req, res) => {
+// Buscar post por ID (com autenticação opcional para calcular user_liked)
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id || 0;
 
     const post = await pool.query(`
       SELECT p.*, 
              u.username, u.name as user_name, u.profile_picture,
              r.name as restaurant_name, r.address,
              COUNT(DISTINCT l.user_id) as likes_count,
-             COUNT(DISTINCT c.id) as comments_count
+             COUNT(DISTINCT CASE WHEN c.parent_comment_id IS NULL THEN c.id END) as comments_count,
+             EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as user_liked
       FROM posts p
       JOIN users u ON p.user_id = u.id
       JOIN restaurants r ON p.restaurant_id = r.id
       LEFT JOIN likes l ON p.id = l.post_id
       LEFT JOIN comments c ON p.id = c.post_id
-      WHERE p.id = $1
+      WHERE p.id = $2
       GROUP BY p.id, u.username, u.name, u.profile_picture, r.name, r.address
-    `, [id]);
+    `, [userId, id]);
 
     if (post.rows.length === 0) {
       return res.status(404).json({ error: 'Post não encontrado' });
     }
 
-    // Buscar fotos
+    // Buscar fotos (retornar objetos { id, photo_url } para consistência)
     const photos = await pool.query(
-      'SELECT * FROM post_photos WHERE post_id = $1 ORDER BY uploaded_at ASC',
+      'SELECT id, photo_url FROM post_photos WHERE post_id = $1 ORDER BY uploaded_at ASC',
       [id]
     );
 
     post.rows[0].photos = photos.rows;
 
-    res.json(post.rows[0]);
+    // Converter datas para o padrão usado no feed
+    res.json(processPosts([post.rows[0]])[0]);
 
   } catch (error) {
     console.error('Erro ao buscar post:', error);
@@ -169,7 +172,7 @@ router.get('/:id', async (req, res) => {
 // Criar novo post
 router.post('/', auth, async (req, res) => {
   try {
-    const { restaurant_id, title, content, rating, photos } = req.body;
+    const { restaurant_id, content, rating, photos } = req.body;
     const userId = req.user.id;
 
     if (!restaurant_id || !content || !rating) {
@@ -192,10 +195,10 @@ router.post('/', auth, async (req, res) => {
 
     // Criar post
     const newPost = await pool.query(`
-      INSERT INTO posts (user_id, restaurant_id, title, content, rating)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO posts (user_id, restaurant_id, content, rating)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [userId, restaurant_id, title, content, rating]);
+    `, [userId, restaurant_id, content, rating]);
 
     const postId = newPost.rows[0].id;
 
@@ -242,7 +245,7 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, rating, photos } = req.body;
+    const { content, rating, photos } = req.body;
     const userId = req.user.id;
 
     // Verificar se usuário criou o post
@@ -262,10 +265,10 @@ router.put('/:id', auth, async (req, res) => {
     // Atualizar post
     const updatedPost = await pool.query(`
       UPDATE posts 
-      SET title = $1, content = $2, rating = $3
-      WHERE id = $4
+      SET content = $1, rating = $2
+      WHERE id = $3
       RETURNING *
-    `, [title, content, rating, id]);
+    `, [content, rating, id]);
 
     // Atualizar fotos se fornecidas
     if (photos) {
@@ -352,7 +355,7 @@ router.post('/upload-photo', auth, upload.single('photo'), handleUploadError, as
     
     res.json({
       message: 'Foto enviada com sucesso!',
-      photoUrl: photoUrl
+      photo_url: photoUrl
     });
 
   } catch (error) {

@@ -51,9 +51,6 @@ function Profile() {
   const isOwnProfile = !username || username === currentUser?.username;
   const displayUser = isOwnProfile ? (profileUser || currentUser) : profileUser;
 
-  // Adicionar estado para controlar se já tentou buscar o perfil
-  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
-
   const fetchUserProfile = useCallback(async () => {
     if (!targetUsername) {
       console.log('Sem targetUsername, aguardando...');
@@ -62,10 +59,13 @@ function Profile() {
     
     try {
       console.log('Buscando perfil para:', targetUsername);
-      setHasAttemptedFetch(true);
       
       const response = await axios.get(`/api/users/profile/${targetUsername}`);
+      console.log('Perfil recebido:', response.data);
+      
       setProfileUser(response.data.user);
+      setUserPosts(response.data.posts || []); // Changed from setPosts to setUserPosts
+      // setFavorites(response.data.favorite_restaurants || []); // This line was removed
       setFollowersCount(response.data.user.followers_count || 0);
       setFollowingCount(response.data.user.following_count || 0);
       
@@ -79,18 +79,17 @@ function Profile() {
           console.error('Erro ao verificar status de seguindo:', error);
         }
       }
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao buscar perfil do usuário:', error);
-      setHasAttemptedFetch(true);
       
       // Só redirecionar para home se for um erro 404 E não for o próprio perfil
       if (error.response?.status === 404 && !isOwnProfile) {
-        console.log('Perfil não encontrado, redirecionando para home');
         navigate('/');
-      } else if (error.response?.status === 404 && isOwnProfile) {
-        console.log('Erro 404 no próprio perfil, mas não redirecionando');
-        // Não redirecionar se for o próprio perfil
+        return;
       }
+      
+      setLoading(false);
     }
   }, [targetUsername, navigate, currentUser, isOwnProfile]);
 
@@ -119,17 +118,17 @@ function Profile() {
     }
   }, [targetUsername, currentPage]);
 
-  // Buscar perfil e a primeira página de posts quando o username da rota mudar
+  // Carregar perfil do usuário quando o componente montar ou username mudar
   useEffect(() => {
     if (!targetUsername) return;
     console.log('Carregando perfil para username:', targetUsername);
-    setHasAttemptedFetch(false);
     setCurrentPage(1);
     setProfileUser(null);
     setUserPosts([]);
+    setLoading(true);
+    
     fetchUserProfile();
-    fetchUserPosts();
-  }, [targetUsername, fetchUserProfile, fetchUserPosts]);
+  }, [targetUsername, fetchUserProfile]);
 
   // Buscar mais posts quando a página mudar
   useEffect(() => {
@@ -445,7 +444,7 @@ function Profile() {
             ) : (
               <FaRegHeart />
             )}
-            <span>{post.likes_count || 0}</span>
+            <span>{Number(post.likes_count || 0)}</span>
           </button>
           <button 
             className="action-button"
@@ -455,7 +454,7 @@ function Profile() {
             }}
           >
             <FaComment />
-            <span>{post.comments_count || 0}</span>
+            <span>{Number(post.comments_count || 0)}</span>
           </button>
         </div>
       </div>
@@ -702,7 +701,7 @@ function Profile() {
           if (newComment) {
             setUserPosts(prev => prev.map(post => 
               post.id === postToComment.id 
-                ? { ...post, comments_count: (post.comments_count || 0) + 1 } 
+                ? { ...post, comments_count: Number(post.comments_count || 0) + 1 } 
                 : post
             ));
           } else if (increment === -1) {

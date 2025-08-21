@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaInstagram, FaGlobe } from 'react-icons/fa';
+import { SiIfood } from 'react-icons/si';
 import './RestaurantCard.css';
 
 const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, onHoursClick, canEdit = false, isLoggedIn = false }) => {
@@ -25,8 +26,30 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, onHoursClick, ca
     nextOpen = "Abre às 11:00",
     photos = [],
     isFavorite = false,
-    favoritesCount = 0
+    favoritesCount = 0,
+    social = {}
   } = restaurant || {};
+
+  const { instagram, ifood, website } = social;
+
+  const normalizeUrl = (value, type) => {
+    if (!value) return null;
+    let url = String(value).trim();
+    if (type === 'instagram' && !/^https?:\/\//i.test(url)) {
+      if (/^@[A-Za-z0-9._-]+$/.test(url)) url = url.slice(1);
+      if (/^[A-Za-z0-9._-]+$/.test(url)) {
+        url = `https://instagram.com/${url}`;
+      }
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+    return url;
+  };
+
+  const instagramUrl = normalizeUrl(instagram, 'instagram');
+  const ifoodUrl = normalizeUrl(ifood, 'ifood');
+  const websiteUrl = normalizeUrl(website, 'website');
 
   // Debug: log das fotos recebidas
   console.log('🔍 RestaurantCard - photos recebidas:', photos);
@@ -180,6 +203,53 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, onHoursClick, ca
                 <span>{isFavorite ? 'Favorito' : 'Favoritar'}</span>
               </button>
             )}
+            <div className="header-social">
+              {instagramUrl ? (
+                <a
+                  href={instagramUrl}
+                  className="social-link instagram"
+                  title="Instagram"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FaInstagram />
+                </a>
+              ) : (
+                <span className="social-link instagram disabled" title="Instagram não informado">
+                  <FaInstagram />
+                </span>
+              )}
+              {ifoodUrl ? (
+                <a
+                  href={ifoodUrl}
+                  className="social-link ifood"
+                  title="iFood"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <SiIfood />
+                </a>
+              ) : (
+                <span className="social-link ifood disabled" title="iFood não informado">
+                  <SiIfood />
+                </span>
+              )}
+              {websiteUrl ? (
+                <a
+                  href={websiteUrl}
+                  className="social-link website"
+                  title="Website / Cardápio"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FaGlobe />
+                </a>
+              ) : (
+                <span className="social-link website disabled" title="Website/Cardápio não informado">
+                  <FaGlobe />
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

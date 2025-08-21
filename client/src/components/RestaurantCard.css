@@ -123,6 +123,51 @@
   flex-shrink: 0;
 }
 
+/* Social Links below header content */
+.header-social {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 1.5rem 0.5rem 1.5rem;
+}
+
+.social-link {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.social-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.social-link.disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.social-link.instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+}
+
+.social-link.ifood {
+  background: #ea1d2c; /* iFood brand color */
+}
+
+.social-link.website {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+}
+
 .btn-edit, .btn-favorite {
   padding: 0.5rem 0.75rem;
   border: none;
@@ -725,6 +770,9 @@
   
   .header-actions {
     align-self: flex-end;
+  }
+  .header-social {
+    padding: 0 0 0.25rem 0;
   }
   
   .restaurant-name {

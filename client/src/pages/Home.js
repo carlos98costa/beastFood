@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaMapMarkerAlt, FaStar, FaHeart, FaRegHeart, FaComment, FaUtensils, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaStar, FaHeart, FaRegHeart, FaComment, FaEdit, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
 import EditPostModal from '../components/EditPostModal';
 import CommentsModal from '../components/CommentsModal';
 import './Home.css';
+import { resolveUrl } from '../utils/resolveUrl';
 
 const Home = () => {
   const { user, token } = useAuth();
@@ -134,7 +135,7 @@ const Home = () => {
     // Atualizar o contador de comentários no post
     setPosts(posts.map(post => 
       post.id === commentingPost.id 
-        ? { ...post, comments_count: (post.comments_count || 0) + 1 }
+        ? { ...post, comments_count: Number(post.comments_count || 0) + 1 }
         : post
     ));
   };
@@ -212,21 +213,10 @@ const Home = () => {
 
   return (
     <div className="home-page">
-      <div className="hero-section">
-        <div className="container">
-          <h1 className="hero-title">
-            Descubra os melhores restaurantes
-          </h1>
-          <p className="hero-subtitle">
-            Compartilhe suas experiências gastronômicas e descubra novos lugares incríveis
-          </p>
-          {user && (
-            <Link to="/create-post" className="btn btn-primary btn-large">
-              <FaUtensils />
-              Criar Avaliação
-            </Link>
-          )}
-        </div>
+      {/* Header da página */}
+      <div className="page-header">
+        <h1>🍽️ BeastFood</h1>
+        <p>Descubra os melhores restaurantes e compartilhe suas experiências gastronômicas!</p>
       </div>
 
       <div className="container">
@@ -255,7 +245,7 @@ const Home = () => {
                     <div className="post-user">
                       {post.profile_picture ? (
                         <img 
-                          src={post.profile_picture} 
+                          src={resolveUrl(post.profile_picture)} 
                           alt={post.user_name}
                           className="user-avatar"
                           onError={(e) => {
@@ -303,14 +293,14 @@ const Home = () => {
                     <div className="post-images">
                       {post.photos.length === 1 ? (
                         <img 
-                          src={post.photos[0].photo_url} 
+                          src={resolveUrl(post.photos[0].photo_url)} 
                           alt="Post"
                           className="post-image"
                         />
                       ) : (
                         <div className="post-photos-gallery">
                           <img 
-                            src={post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url} 
+                            src={resolveUrl(post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url)} 
                             alt="Post"
                             className="post-image"
                           />
@@ -361,14 +351,14 @@ const Home = () => {
                       ) : (
                         <FaRegHeart />
                       )}
-                      <span>{post.likes_count || 0}</span>
+                      <span>{Number(post.likes_count || 0)}</span>
                     </button>
                     <button 
                       className="action-button"
                       onClick={() => handleComment(post)}
                     >
                       <FaComment />
-                      <span>{post.comments_count || 0}</span>
+                      <span>{Number(post.comments_count || 0)}</span>
                     </button>
                   </div>
                 </div>

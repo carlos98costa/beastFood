@@ -1,9 +1,12 @@
 .post-detail-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
   background: white;
-  min-height: 100vh;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: var(--post-card-padding, 20px);
+  width: 100%;
+  max-width: var(--post-card-max, 580px);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Botão voltar */
@@ -35,8 +38,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
-  padding-bottom: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 1px solid #e1e8ed;
 }
 
@@ -130,7 +133,7 @@
 
 /* Conteúdo do post */
 .post-content {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .post-title {
@@ -223,9 +226,20 @@
 
 .post-photo {
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
   object-fit: cover;
   transition: transform 0.2s ease;
+}
+
+/* Ajustes específicos por quantidade de fotos */
+.photos-grid-1 .photo-item {
+  max-height: 640px;
+}
+.photos-grid-2 .photo-item,
+.photos-grid-3 .photo-item,
+.photos-grid-4 .photo-item {
+  height: 100%;
 }
 
 .photo-item:hover .post-photo {
@@ -236,8 +250,8 @@
 .post-stats {
   display: flex;
   gap: 32px;
-  margin-bottom: 24px;
-  padding: 20px;
+  margin: 16px 0 24px;
+  padding: 16px;
   background: #f7f9fa;
   border-radius: 12px;
 }
@@ -264,6 +278,29 @@
   color: #657786;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Seção de comentários */
+.comments-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.view-comments-btn {
+  background: #fff3ec;
+  color: #e55a2b;
+  border: 1px solid #ffd7c7;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-comments-btn:hover {
+  background: #ffe7db;
+  transform: translateY(-1px);
 }
 
 /* Estados de carregamento e erro */
@@ -308,7 +345,8 @@
 /* Responsividade */
 @media (max-width: 768px) {
   .post-detail-container {
-    padding: 16px;
+    padding: 20px;
+    margin: 0 auto;
   }
   
   .post-header {
@@ -346,7 +384,7 @@
 
 @media (max-width: 480px) {
   .post-detail-container {
-    padding: 12px;
+    padding: 16px;
   }
   
   .post-header {

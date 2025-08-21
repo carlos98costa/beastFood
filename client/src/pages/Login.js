@@ -102,10 +102,7 @@ function Login() {
 
         <div className="login-footer">
           <p>
-            Não tem uma conta?{' '}
-            <Link to="/register" className="link">
-              Cadastre-se aqui
-            </Link>
+            Não tem uma conta? <Link to="/register">Registre-se</Link>
           </p>
         </div>
       </div>

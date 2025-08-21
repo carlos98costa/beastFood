@@ -1,64 +1,49 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 
-// Configurar URL base do axios com otimizações de performance
-axios.defaults.baseURL = 'http://localhost:5000';
-axios.defaults.withCredentials = true; // Importante para enviar cookies
-axios.defaults.timeout = 5000; // Timeout de 5 segundos para ser mais responsivo
-// Otimizações adicionais
-axios.defaults.maxRedirects = 0; // Sem redirecionamentos
-// Tratar 4xx como erro para permitir que o interceptor de 401 execute corretamente
-axios.defaults.validateStatus = (status) => status >= 200 && status < 300;
+// Configurar URL base do axios
+const determineBaseURL = () => {
+  if (typeof window !== 'undefined' && window.location) {
+    const protocol = window.location.protocol || 'http:';
+    const hostname = window.location.hostname || 'localhost';
+    return `${protocol}//${hostname}:5000`;
+  }
+  return 'http://localhost:5000';
+};
 
-// Interceptor para renovar token automaticamente em caso de erro 401
+axios.defaults.baseURL = determineBaseURL();
+axios.defaults.withCredentials = true;
+axios.defaults.timeout = 10000;
+
+// Interceptor para renovar token automaticamente
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // Se for rate limiting, não tentar renovar
-    if (error.response?.status === 429) {
-      console.log('Rate limiting detectado no interceptor, aguardando...');
-      // Aguardar 500ms antes de rejeitar (reduzido de 1s)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return Promise.reject(error);
-    }
-    
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      // Verificar se há token no localStorage antes de tentar renovar
-      const currentToken = localStorage.getItem('token');
-      if (!currentToken) {
-        console.log('Sem token para renovar, redirecionando para logout');
-        // Disparar evento para fazer logout
-        window.dispatchEvent(new CustomEvent('tokenExpired'));
+      // Evitar loop infinito: só tentar renovar se não for uma requisição de login
+      if (originalRequest.url === '/api/auth/login' || originalRequest.url === '/api/auth/refresh') {
+        console.log('Interceptor: requisição de auth, não tentando renovar token');
         return Promise.reject(error);
       }
       
       try {
-        console.log('Token expirado, tentando renovar...');
+        console.log('Interceptor: tentando renovar token...');
         const response = await axios.post('/api/auth/refresh');
         const { accessToken } = response.data;
         
-        // Atualizar token no contexto e localStorage
         localStorage.setItem('token', accessToken);
         axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         
-        // Reenviar a requisição original com o novo token
         originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
         return axios(originalRequest);
       } catch (refreshError) {
-        console.error('Falha na renovação do token:', refreshError);
-        
-        // Se falhar na renovação, limpar dados e redirecionar para logout
-        if (refreshError.response?.status === 401) {
-          localStorage.removeItem('token');
-          // Não usar window.location.href aqui para evitar problemas de navegação
-          // Em vez disso, disparar um evento customizado
-          window.dispatchEvent(new CustomEvent('tokenExpired'));
-        }
-        
+        console.log('Interceptor: falha na renovação, fazendo logout...');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
@@ -77,25 +62,17 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [notificationsUnread, setNotificationsUnread] = useState(0);
   
-  // Debug: log do estado inicial
-  console.log('AuthProvider - Estado inicial:', { 
-    hasToken: !!token, 
-    loading, 
-    user: !!user 
-  });
-  
-  // Prevenir requisições duplicadas
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Usar useRef para evitar loops infinitos
   const lastRequestTime = useRef(0);
   const verifyTimeout = useRef(null);
   const isInitialized = useRef(false);
   const tokenCheckInterval = useRef(null);
+  const eventSourceRef = useRef(null);
 
-  // Função para logout local (sem dependências circulares)
   const doLocalLogout = useCallback(() => {
     setUser(null);
     setToken(null);
@@ -103,8 +80,13 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
     isInitialized.current = false;
+    setNotificationsUnread(0);
     
-    // Limpar intervalos e timeouts
+    if (eventSourceRef.current) {
+      try { eventSourceRef.current.close(); } catch (_) {}
+      eventSourceRef.current = null;
+    }
+    
     if (tokenCheckInterval.current) {
       clearInterval(tokenCheckInterval.current);
       tokenCheckInterval.current = null;
@@ -115,83 +97,79 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Funções memoizadas para evitar recriação
-  const checkAndRefreshToken = useCallback(async () => {
-    if (!user || !token || isRefreshing) return;
-
-    try {
-      const response = await axios.post('/api/auth/refresh');
-      const { accessToken } = response.data;
-      
-      setToken(accessToken);
-      localStorage.setItem('token', accessToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      console.log('Token renovado automaticamente');
-    } catch (error) {
-      console.log('Falha na renovação automática do token:', error.message);
-    }
-  }, [user, token, isRefreshing]);
-
   const attemptTokenRefresh = useCallback(async () => {
     if (isRefreshing) {
       console.log('Renovação já em andamento, pulando...');
       return;
     }
 
+    console.log('Tentando renovar token...');
     setIsRefreshing(true);
 
     try {
-      console.log('Tentando renovar token...');
-      const refreshResponse = await axios.post('/api/auth/refresh');
-      const { accessToken } = refreshResponse.data;
-      
-      console.log('Token renovado com sucesso');
+      const response = await axios.post('/api/auth/refresh');
+      const { accessToken } = response.data;
       setToken(accessToken);
       localStorage.setItem('token', accessToken);
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      // Verificar com o novo token
-      const verifyResponse = await axios.get('/api/auth/verify');
-      setUser(verifyResponse.data.user);
-      setLoading(false);
-      console.log('Token renovado e verificado com sucesso');
-    } catch (refreshError) {
-      console.error('Falha na renovação do token:', refreshError);
-      
-      if (refreshError.response?.status === 429) {
-        console.log('Rate limiting na renovação, aguardando...');
-        setTimeout(() => {
-          if (token && !isRefreshing) {
-            console.log('Tentando renovar token novamente após rate limiting...');
-            attemptTokenRefresh();
-          }
-        }, 10000); // Reduzido para 10 segundos
-        return;
-      }
-      
-      if (refreshError.response?.status === 401) {
-        console.log('Refresh token expirado ou invalidado, fazendo logout');
+      console.log('Token renovado com sucesso');
+    } catch (error) {
+      console.log('Falha na renovação do token:', error.message);
+      if (error.response?.status === 401) {
+        console.log('Token inválido, fazendo logout...');
         doLocalLogout();
       }
     } finally {
       setIsRefreshing(false);
     }
-  }, [isRefreshing, token, doLocalLogout]);
+  }, [isRefreshing, doLocalLogout]);
 
+  const checkAndRefreshToken = useCallback(async () => {
+    if (!user || !token || isRefreshing) return;
+    try {
+      const response = await axios.post('/api/auth/refresh');
+      const { accessToken } = response.data;
+      setToken(accessToken);
+      localStorage.setItem('token', accessToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      console.log('Token renovado automaticamente');
+    } catch (error) {
+      console.log('Falha na renovação automática do token:', error.message);
+    }
+  }, [user, token, isRefreshing]);
+
+  // MOVER verifyToken PARA AQUI - ANTES DE SER USADO
   const verifyToken = useCallback(async () => {
-    console.log('verifyToken chamada com:', { token: !!token, isVerifying });
+    console.log('🔍 verifyToken executando:', { 
+      hasToken: !!token, 
+      isVerifying, 
+      hasUser: !!user 
+    });
     
     if (!token || isVerifying) {
-      console.log('verifyToken: pulando verificação - sem token ou já verificando');
+      console.log('⏭️ verifyToken: pulando verificação - sem token ou já verificando');
       setLoading(false);
       return;
     }
 
-    // Prevenir requisições muito próximas (reduzido para 200ms)
+    // Proteção adicional: se já temos usuário, não precisamos verificar
+    if (user) {
+      console.log('✅ verifyToken: usuário já existe, pulando verificação');
+      setLoading(false);
+      return;
+    }
+
+    // Verificar se o token está configurado no axios
+    const currentAuthHeader = axios.defaults.headers.common['Authorization'];
+    if (!currentAuthHeader || !currentAuthHeader.includes(token)) {
+      console.log('🔧 verifyToken: token não configurado no axios, configurando...');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Prevenir requisições muito próximas
     const now = Date.now();
-    if (now - lastRequestTime.current < 200) { // 200ms
-      console.log('Requisição muito recente, aguardando...');
+    if (now - lastRequestTime.current < 2000) {
+      console.log('⏳ Requisição muito recente, aguardando...');
       setLoading(false);
       return;
     }
@@ -201,50 +179,142 @@ export function AuthProvider({ children }) {
       clearTimeout(verifyTimeout.current);
     }
 
-    console.log('verifyToken: executando verificação AGORA...');
+    console.log('🚀 verifyToken: executando verificação AGORA...');
+    console.log('🔑 Token atual:', token.substring(0, 20) + '...');
+    console.log('📡 Header Authorization:', axios.defaults.headers.common['Authorization']);
     
-    // SEM debounce - executar imediatamente
     setIsVerifying(true);
     lastRequestTime.current = now;
 
     try {
-      console.log('verifyToken: fazendo requisição para /api/auth/verify...');
+      console.log('🌐 verifyToken: fazendo requisição para /api/auth/verify...');
       const response = await axios.get('/api/auth/verify');
-      console.log('verifyToken: resposta recebida:', response.data);
-      setUser(response.data.user);
-      setLoading(false);
-      console.log('verifyToken: usuário definido e loading false');
+      console.log('✅ verifyToken: resposta recebida:', response.data);
+      
+      // Verificar se a resposta contém dados válidos
+      if (response.data && response.data.user) {
+        console.log('👤 verifyToken: usuário válido recebido, atualizando estado...');
+        setUser(response.data.user);
+        setLoading(false);
+        console.log('✅ verifyToken: usuário definido e loading false');
+      } else {
+        console.log('❌ verifyToken: resposta inválida, limpando estado...');
+        setUser(null);
+        setLoading(false);
+      }
     } catch (error) {
-      console.error('verifyToken: erro na verificação:', error);
+      console.error('❌ verifyToken: erro na verificação:', error);
       
       if (error.response?.status === 429) {
-        console.log('Rate limiting detectado, aguardando antes de tentar renovar...');
+        console.log('⏰ Rate limiting detectado, aguardando...');
         setLoading(false);
-        // Aguardar 3 segundos antes de tentar renovar (reduzido de 5s)
         setTimeout(() => {
           if (token && !isRefreshing) {
-            console.log('Tentando renovar token após delay...');
+            console.log('🔄 Tentando renovar token após delay...');
             attemptTokenRefresh();
           }
-        }, 3000);
+        }, 10000);
         return;
       }
       
       if (!isRefreshing) {
-        console.log('verifyToken: tentando renovar token...');
+        console.log('🔄 verifyToken: tentando renovar token...');
         attemptTokenRefresh();
       }
       
-      // Garantir que loading seja false mesmo em caso de erro
       setLoading(false);
-      console.log('verifyToken: loading definido como false após erro');
+      console.log('⚠️ verifyToken: loading definido como false após erro');
     } finally {
       setIsVerifying(false);
-      // Garantir que loading seja false no finally
       setLoading(false);
-      console.log('verifyToken: finally executado, loading false');
+      console.log('🏁 verifyToken: finally executado, loading false');
     }
-  }, [token, isVerifying, isRefreshing, attemptTokenRefresh]);
+  }, [token, isVerifying, isRefreshing, user]);
+
+  const login = useCallback(async (username, password) => {
+    try {
+      console.log('Fazendo login para:', username);
+      const response = await axios.post('/api/auth/login', { username, password });
+      
+      console.log('🔍 Resposta completa do backend:', response);
+      console.log('📦 Response.data:', response.data);
+      console.log('🔑 Token na resposta:', response.data.accessToken);
+      console.log('👤 User na resposta:', response.data.user);
+      
+      const { user: userData, accessToken: newToken } = response.data;
+      
+      console.log('Login bem-sucedido para:', username);
+      console.log('Token extraído:', newToken ? 'SIM' : 'NÃO');
+      console.log('User extraído:', userData ? 'SIM' : 'NÃO');
+      
+      // 1. Salvar no localStorage
+      localStorage.setItem('token', newToken);
+      
+      // 2. Configurar axios
+      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      
+      // 3. Atualizar estado
+      setToken(newToken);
+      setUser(userData);
+      
+      console.log('Login concluído - usuário logado');
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Erro ao fazer login' 
+      };
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async (user, accessToken) => {
+    try {
+      console.log('Login Google bem-sucedido para:', user.username);
+      
+      // 1. Salvar no localStorage
+      localStorage.setItem('token', accessToken);
+      
+      // 2. Configurar axios
+      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      
+      // 3. Atualizar estado
+      setToken(accessToken);
+      setUser(user);
+      setLoading(false);
+      
+      console.log('Login Google concluído - usuário logado');
+      return { success: true };
+    } catch (error) {
+      console.error('Erro no login Google:', error);
+      return { 
+        success: false, 
+        error: 'Erro no login com Google' 
+      };
+    }
+  }, []);
+
+  const register = useCallback(async (userData) => {
+    try {
+      console.log('Fazendo registro para:', userData.username);
+      const response = await axios.post('/api/auth/register', userData);
+      const { user: newUser, token: newToken } = response.data;
+      
+      setUser(newUser);
+      setToken(newToken);
+      localStorage.setItem('token', newToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      
+      console.log('Registro bem-sucedido para:', userData.username);
+      return { success: true, user: newUser };
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 'Erro ao fazer registro' 
+      };
+    }
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -260,44 +330,39 @@ export function AuthProvider({ children }) {
     }
   }, [doLocalLogout]);
 
-  // Listener para token expirado
+  // Configurar axios com token e verificar
   useEffect(() => {
-    const handleTokenExpired = () => {
-      console.log('Evento tokenExpired recebido, fazendo logout');
-      logout();
-    };
-
-    window.addEventListener('tokenExpired', handleTokenExpired);
-    
-    return () => {
-      window.removeEventListener('tokenExpired', handleTokenExpired);
-    };
-  }, [logout]);
-
-  // Configurar axios com token e verificar - APENAS UMA VEZ na inicialização
-  useEffect(() => {
-    console.log('useEffect inicialização - Executando:', { 
+    console.log('🔍 useEffect inicialização:', { 
       hasToken: !!token, 
-      isInitialized: isInitialized.current
+      tokenLength: token ? token.length : 0,
+      hasUser: !!user,
+      loading
     });
     
-    if (token && !isInitialized.current) {
-      console.log('Configurando axios com token:', token.substring(0, 20) + '...');
+    if (token) {
+      // Configurar axios com o token
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      isInitialized.current = true;
+      console.log('✅ Axios configurado com token');
       
-      // Verificar token apenas uma vez na inicialização
-      console.log('Chamando verifyToken...');
-      verifyToken();
-    } else if (!token) {
-      console.log('Sem token, limpando estado...');
+      // Se não temos usuário, buscar do backend
+      if (!user) {
+        console.log('🔄 Buscando dados do usuário...');
+        // Usar setTimeout para evitar dependência circular
+        setTimeout(() => {
+          verifyToken();
+        }, 100);
+      } else {
+        console.log('✅ Usuário já existe, não precisa verificar');
+        setLoading(false);
+      }
+    } else {
+      // Sem token, limpar tudo
       setUser(null);
-      setLoading(false); // Definir loading como false quando não há token
+      setLoading(false);
       delete axios.defaults.headers.common['Authorization'];
-      isInitialized.current = false;
+      console.log('🧹 Estado limpo - sem token');
     }
 
-    // Cleanup
     return () => {
       if (verifyTimeout.current) {
         clearTimeout(verifyTimeout.current);
@@ -306,39 +371,55 @@ export function AuthProvider({ children }) {
         clearInterval(tokenCheckInterval.current);
       }
     };
-  }, [token, verifyToken]);
+  }, [token, user]); // REMOVIDO verifyToken das dependências
 
-  // useEffect adicional para garantir que loading seja false quando não há token
+  // Conexão SSE para notificações
   useEffect(() => {
-    if (!token && loading) {
-      console.log('Forçando loading como false (sem token)');
-      setLoading(false);
+    if (!token) {
+      if (eventSourceRef.current) {
+        try { eventSourceRef.current.close(); } catch (_) {}
+        eventSourceRef.current = null;
+      }
+      setNotificationsUnread(0);
+      return;
     }
-  }, [token, loading]);
 
-  // Timeout de segurança para evitar loading infinito (mais responsivo)
-  useEffect(() => {
-    if (loading && token) {
-      console.log('Loading ativo com token, configurando timeout de segurança...');
-      const safetyTimeout = setTimeout(() => {
-        if (loading && token) {
-          console.log('Timeout de segurança: forçando loading como false');
-          setLoading(false);
-        }
-      }, 3000); // Reduzido para 3 segundos para ser mais responsivo
+    // Buscar contador inicial via HTTP
+    axios.get('/api/notifications/unread-count').then((r) => {
+      const c = r?.data?.unread;
+      if (typeof c === 'number') setNotificationsUnread(c);
+    }).catch(() => {});
 
-      return () => clearTimeout(safetyTimeout);
-    }
-  }, [loading, token]);
+    // Usar URL absoluta para evitar problemas de proxy
+    const base = axios.defaults.baseURL || '';
+    const sseUrl = `${base}/api/notifications/stream?token=${encodeURIComponent(token)}`;
+    const es = new EventSource(sseUrl);
+    eventSourceRef.current = es;
 
-  // Verificar e renovar token automaticamente - APENAS QUANDO NECESSÁRIO
-  useEffect(() => {
-    console.log('useEffect token/user - Executando:', { 
-      hasToken: !!token, 
-      hasUser: !!user, 
-      hasInterval: !!tokenCheckInterval.current 
+    es.addEventListener('unread_count', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        setNotificationsUnread(data.unread || 0);
+      } catch (_) {}
     });
-    
+
+    es.addEventListener('notification', () => {
+      setNotificationsUnread((c) => c + 1);
+    });
+
+    es.onerror = () => {
+      try { es.close(); } catch (_) {}
+      eventSourceRef.current = null;
+    };
+
+    return () => {
+      try { es.close(); } catch (_) {}
+      eventSourceRef.current = null;
+    };
+  }, [token]);
+
+  // Verificar e renovar token automaticamente
+  useEffect(() => {
     if (token && user && !tokenCheckInterval.current) {
       const checkTokenExpiration = () => {
         if (!user || !token) return;
@@ -358,8 +439,7 @@ export function AuthProvider({ children }) {
         }
       };
 
-      // Verificar a cada 1 minuto (reduzido de 2 minutos)
-      tokenCheckInterval.current = setInterval(checkTokenExpiration, 60 * 1000);
+      tokenCheckInterval.current = setInterval(checkTokenExpiration, 2 * 60 * 1000);
     }
 
     return () => {
@@ -369,98 +449,6 @@ export function AuthProvider({ children }) {
       }
     };
   }, [token, user, checkAndRefreshToken]);
-
-  // Função para retry com backoff exponencial
-  const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        return await fn();
-      } catch (error) {
-        if (error.response?.status === 429 && i < maxRetries - 1) {
-          const delay = baseDelay * Math.pow(2, i);
-          console.log(`Rate limiting, aguardando ${delay}ms antes da tentativa ${i + 1}`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
-      }
-    }
-  };
-
-  const login = async (username, password) => {
-    try {
-      const loginFn = async () => {
-        const response = await axios.post('/api/auth/login', { username, password });
-        return response;
-      };
-      
-      // Reduzir retries e delay para melhor performance
-      const response = await retryWithBackoff(loginFn, 2, 500);
-      
-      const { user, accessToken } = response.data;
-      
-      setUser(user);
-      setToken(accessToken);
-      setLoading(false);
-      localStorage.setItem('token', accessToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Erro no login:', error);
-      
-      if (error.response?.status === 429) {
-        return { 
-          success: false, 
-          error: 'Muitas tentativas de login. Aguarde um momento e tente novamente.' 
-        };
-      }
-      
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Erro no login' 
-      };
-    }
-  };
-
-  const loginWithGoogle = async (user, accessToken) => {
-    try {
-      setUser(user);
-      setToken(accessToken);
-      setLoading(false);
-      localStorage.setItem('token', accessToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Erro no login Google:', error);
-      return { 
-        success: false, 
-        error: 'Erro no login com Google' 
-      };
-    }
-  };
-
-  const register = async (userData) => {
-    try {
-      const response = await axios.post('/api/auth/register', userData);
-      const { user, accessToken } = response.data;
-      
-      setUser(user);
-      setToken(accessToken);
-      setLoading(false);
-      localStorage.setItem('token', accessToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Erro no registro:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.error || 'Erro no registro' 
-      };
-    }
-  };
 
   const updateProfile = async (profileData) => {
     try {
@@ -475,16 +463,27 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const setNotificationsUnreadCount = useCallback((count) => {
+    try {
+      const n = Number(count);
+      setNotificationsUnread(Number.isFinite(n) && n >= 0 ? n : 0);
+    } catch (_) {
+      setNotificationsUnread(0);
+    }
+  }, []);
+
   const value = {
     user,
-    loading,
     token,
+    loading,
     login,
     loginWithGoogle,
     register,
     logout,
     updateProfile,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    notificationsUnread,
+    setNotificationsUnreadCount
   };
 
   return (

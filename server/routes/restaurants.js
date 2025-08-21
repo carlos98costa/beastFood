@@ -316,6 +316,7 @@ router.put('/:id', requireOwnerOrAdmin, async (req, res) => {
     // Preparar campos para atualização de forma mais robusta
     const allowedFields = [
       'name', 'description', 'address', 'phone', 'website',
+      'instagram', 'ifood',
       'cuisine_type', 'price_range', 'source_type', 'source_id'
     ];
 

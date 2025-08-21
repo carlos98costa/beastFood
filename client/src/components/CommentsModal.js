@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { FaChevronLeft, FaChevronRight, FaHeart, FaRegHeart, FaReply, FaTrash, FaEdit } from 'react-icons/fa';
 import './CommentsModal.css';
+import { resolveUrl } from '../utils/resolveUrl';
 
 const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
   const [newComment, setNewComment] = useState('');
@@ -190,7 +191,10 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
         setComments(prev => 
           prev.map(comment => 
             comment.id === replyingTo.id 
-              ? { ...comment, replies_count: (comment.replies_count || 0) + 1 }
+              ? { 
+                  ...comment, 
+                  replies_count: Number(comment.replies_count || 0) + 1 
+                }
               : comment
           )
         );
@@ -229,8 +233,8 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
               ? { 
                   ...comment, 
                   likes_count: data.liked 
-                    ? (comment.likes_count || 0) + 1 
-                    : Math.max(0, (comment.likes_count || 0) - 1),
+                    ? Number(comment.likes_count || 0) + 1 
+                    : Math.max(0, Number(comment.likes_count || 0) - 1),
                   user_liked: data.liked
                 }
               : comment
@@ -258,6 +262,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
 
       if (response.ok) {
         const data = await response.json();
+        // Atualiza comentário de topo (se for o caso)
         setComments(prev => 
           prev.map(comment => 
             comment.id === commentId 
@@ -265,6 +270,19 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
               : comment
           )
         );
+
+        // Atualiza caso seja uma resposta em qualquer lista de respostas
+        setReplies(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach((parentId) => {
+            updated[parentId] = (updated[parentId] || []).map((reply) =>
+              reply.id === commentId
+                ? { ...reply, content: data.comment.content }
+                : reply
+            );
+          });
+          return updated;
+        });
         setEditingComment(null);
         setEditContent('');
       }
@@ -320,7 +338,10 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
         setComments(prev => 
           prev.map(comment => 
             comment.id === parentCommentId 
-              ? { ...comment, replies_count: Math.max(0, (comment.replies_count || 0) - 1) }
+              ? { 
+                  ...comment, 
+                  replies_count: Math.max(0, Number(comment.replies_count || 0) - 1) 
+                }
               : comment
           )
         );
@@ -351,8 +372,8 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
               ? { 
                   ...reply, 
                   likes_count: data.liked 
-                    ? (reply.likes_count || 0) + 1 
-                    : Math.max(0, (reply.likes_count || 0) - 1),
+                    ? Number(reply.likes_count || 0) + 1 
+                    : Math.max(0, Number(reply.likes_count || 0) - 1),
                   user_liked: data.liked
                 }
               : reply
@@ -383,7 +404,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
           {post?.photos?.length > 0 ? (
             <>
               <img 
-                src={post?.photos?.[currentPhotoIndex]?.photo_url} 
+                src={resolveUrl(post?.photos?.[currentPhotoIndex]?.photo_url)} 
                 alt={`Foto ${currentPhotoIndex + 1}`}
                 className="post-image-main"
               />
@@ -449,7 +470,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                         <div className="comment-avatar">
                           {comment.profile_picture ? (
                             <img 
-                              src={comment.profile_picture} 
+                              src={resolveUrl(comment.profile_picture)} 
                               alt={comment.user_name}
                               onError={(e) => {
                                 e.target.style.display = 'none';
@@ -535,7 +556,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                         onClick={() => handleLikeComment(comment.id)}
                       >
                         {comment.user_liked ? <FaHeart /> : <FaRegHeart />}
-                        <span>{comment.likes_count || 0}</span>
+                        <span>{Number(comment.likes_count || 0)}</span>
                       </button>
                       
                       <button 
@@ -552,8 +573,8 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                           onClick={() => toggleReplies(comment.id)}
                         >
                           {showReplies[comment.id] 
-                            ? `Ocultar ${comment.replies_count} resposta${(comment.replies_count || 0) > 1 ? 's' : ''}`
-                            : `Ver ${comment.replies_count} resposta${(comment.replies_count || 0) > 1 ? 's' : ''}`
+                            ? `Ocultar ${Number(comment.replies_count || 0)} resposta${(Number(comment.replies_count || 0)) > 1 ? 's' : ''}`
+                            : `Ver ${Number(comment.replies_count || 0)} resposta${(Number(comment.replies_count || 0)) > 1 ? 's' : ''}`
                           }
                         </button>
                       )}
@@ -611,7 +632,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                                     <div className="reply-avatar">
                                       {reply.profile_picture ? (
                                         <img 
-                                          src={reply.profile_picture} 
+                                          src={resolveUrl(reply.profile_picture)} 
                                           alt={reply.user_name}
                                           onError={(e) => {
                                             e.target.style.display = 'none';
@@ -635,18 +656,59 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                                   {/* Botões de ação para o autor da resposta */}
                                   {reply.user_id === user?.id && (
                                     <div className="reply-actions">
-                                      <button 
-                                        onClick={() => handleDeleteReply(reply.id, comment.id)}
-                                        className="reply-action-btn delete-btn"
-                                      >
-                                        <FaTrash />
-                                      </button>
+                                      {editingComment === reply.id ? (
+                                        <>
+                                          <button 
+                                            onClick={() => handleEditComment(reply.id)}
+                                            className="reply-action-btn save-btn"
+                                          >
+                                            Salvar
+                                          </button>
+                                          <button 
+                                            onClick={() => {
+                                              setEditingComment(null);
+                                              setEditContent('');
+                                            }}
+                                            className="reply-action-btn cancel-btn"
+                                          >
+                                            Cancelar
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <button 
+                                            onClick={() => {
+                                              setEditingComment(reply.id);
+                                              setEditContent(reply.content);
+                                            }}
+                                            className="reply-action-btn edit-btn"
+                                          >
+                                            <FaEdit />
+                                          </button>
+                                          <button 
+                                            onClick={() => handleDeleteReply(reply.id, comment.id)}
+                                            className="reply-action-btn delete-btn"
+                                          >
+                                            <FaTrash />
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   )}
                                 </div>
 
                                 <div className="reply-content">
-                                  <p>{reply.content}</p>
+                                  {editingComment === reply.id ? (
+                                    <textarea
+                                      value={editContent}
+                                      onChange={(e) => setEditContent(e.target.value)}
+                                      className="comment-edit-input"
+                                      rows="3"
+                                      maxLength="500"
+                                    />
+                                  ) : (
+                                    <p>{reply.content}</p>
+                                  )}
                                 </div>
 
                                 {/* Ações da resposta */}
@@ -656,7 +718,7 @@ const CommentsModal = ({ isOpen, onClose, post, onCommentAdded }) => {
                                     onClick={() => handleLikeReply(reply.id, comment.id)}
                                   >
                                     {reply.user_liked ? <FaHeart /> : <FaRegHeart />}
-                                    <span>{reply.likes_count || 0}</span>
+                                    <span>{Number(reply.likes_count || 0)}</span>
                                   </button>
                                 </div>
                               </div>

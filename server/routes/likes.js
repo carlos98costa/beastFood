@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
+const { createNotification } = require('../modules/notifications/notifications.service');
 
 const router = express.Router();
 
@@ -41,6 +42,19 @@ router.post('/:postId', auth, async (req, res) => {
       'SELECT COUNT(*) as count FROM likes WHERE post_id = $1',
       [postId]
     );
+
+    // Buscar dono do post para notificar
+    const ownerResult = await pool.query('SELECT user_id FROM posts WHERE id = $1', [postId]);
+    const ownerId = ownerResult.rows?.[0]?.user_id;
+    if (ownerId) {
+      await createNotification({
+        userId: ownerId,
+        actorId: userId,
+        type: 'post_liked',
+        postId,
+        data: { postId }
+      });
+    }
 
     res.json({
       message: 'Like adicionado com sucesso!',

@@ -1,5 +1,7 @@
 const usersService = require('./users.service');
 
+const { createNotification } = require('../notifications/notifications.service');
+
 class UsersController {
   // Buscar perfil do usuário por username
   async getProfile(req, res) {
@@ -145,6 +147,18 @@ class UsersController {
       }
 
       await usersService.followUser(followerId, userToFollow.id);
+
+      // Notificação para o usuário seguido
+      try {
+        await createNotification({
+          userId: userToFollow.id,
+          actorId: followerId,
+          type: 'user_followed',
+          data: {}
+        });
+      } catch (e) {
+        console.warn('Falha ao gerar notificação de follow (users.controller):', e?.message);
+      }
 
       res.json({ 
         message: `Agora você está seguindo ${userToFollow.username}` 

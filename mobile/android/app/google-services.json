@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1061381797582",
+    "project_id": "beastfood",
+    "storage_bucket": "beastfood.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1061381797582:android:3c8a5ac57f5bafb35dc29f",
+        "android_client_info": {
+          "package_name": "com.beastfood.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1061381797582-vhjnn4tqdhhsnnnaj05cu0t7p1n6an0s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beastfood.mobile",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "1061381797582-ttfpnbisc3f5ajdobufbh4tp8u3hr536.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7b_-ooPS_DQpDma9Z0LXD4yUBa6JIjHU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1061381797582-ttfpnbisc3f5ajdobufbh4tp8u3hr536.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

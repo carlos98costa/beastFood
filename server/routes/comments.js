@@ -1,6 +1,8 @@
 const express = require('express');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
+const optionalAuth = require('../middleware/optional-auth');
+const { createNotification } = require('../modules/notifications/notifications.service');
 
 const router = express.Router();
 
@@ -25,13 +27,13 @@ const processComments = (comments) => {
   }));
 };
 
-// Buscar comentários de um post
-router.get('/:postId', auth, async (req, res) => {
+// Buscar comentários de um post (autenticação opcional para permitir leitura pública)
+router.get('/:postId', optionalAuth, async (req, res) => {
   try {
     const { postId } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const offset = (page - 1) * limit;
-    const userId = req.user.id;
+    const userId = req.user?.id || 0;
 
     const comments = await pool.query(`
       SELECT 
@@ -39,8 +41,8 @@ router.get('/:postId', auth, async (req, res) => {
         u.username, 
         u.name as user_name, 
         u.profile_picture,
-        COUNT(cl.id) as likes_count,
-        COUNT(cr.id) as replies_count,
+        COUNT(DISTINCT cl.id) as likes_count,
+        COUNT(DISTINCT cr.id) as replies_count,
         CASE WHEN clu.id IS NOT NULL THEN true ELSE false END as user_liked
       FROM comments c
       JOIN users u ON c.user_id = u.id
@@ -74,13 +76,13 @@ router.get('/:postId', auth, async (req, res) => {
   }
 });
 
-// Buscar respostas de um comentário
-router.get('/:commentId/replies', auth, async (req, res) => {
+// Buscar respostas de um comentário (autenticação opcional para leitura pública)
+router.get('/:commentId/replies', optionalAuth, async (req, res) => {
   try {
     const { commentId } = req.params;
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
-    const userId = req.user.id;
+    const userId = req.user?.id || 0;
 
     const replies = await pool.query(`
       SELECT 
@@ -88,7 +90,7 @@ router.get('/:commentId/replies', auth, async (req, res) => {
         u.username, 
         u.name as user_name, 
         u.profile_picture,
-        COUNT(cl.id) as likes_count,
+        COUNT(DISTINCT cl.id) as likes_count,
         CASE WHEN clu.id IS NOT NULL THEN true ELSE false END as user_liked
       FROM comments c
       JOIN users u ON c.user_id = u.id
@@ -179,6 +181,41 @@ router.post('/:postId', auth, async (req, res) => {
       comment: processComments([completeComment.rows[0]])[0]
     });
 
+    // Notificações (não bloquear resposta)
+    try {
+      if (parentCommentId) {
+        // Notificar autor do comentário pai
+        const parent = await pool.query('SELECT user_id FROM comments WHERE id = $1', [parentCommentId]);
+        const parentOwnerId = parent.rows?.[0]?.user_id;
+        if (parentOwnerId) {
+          await createNotification({
+            userId: parentOwnerId,
+            actorId: userId,
+            type: 'comment_replied',
+            postId,
+            commentId: newComment.rows[0].id,
+            data: { postId, commentId: newComment.rows[0].id, parentCommentId }
+          });
+        }
+      } else {
+        // Notificar dono do post
+        const postOwner = await pool.query('SELECT user_id FROM posts WHERE id = $1', [postId]);
+        const postOwnerId = postOwner.rows?.[0]?.user_id;
+        if (postOwnerId) {
+          await createNotification({
+            userId: postOwnerId,
+            actorId: userId,
+            type: 'post_commented',
+            postId,
+            commentId: newComment.rows[0].id,
+            data: { postId, commentId: newComment.rows[0].id }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Falha ao gerar notificação de comentário:', e?.message);
+    }
+
   } catch (error) {
     console.error('Erro ao adicionar comentário:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -229,6 +266,25 @@ router.post('/:commentId/like', auth, async (req, res) => {
         message: 'Comentário curtido com sucesso!',
         liked: true 
       });
+
+      // Notificar autor do comentário curtido (não bloquear resposta)
+      try {
+        const owner = await pool.query('SELECT user_id, post_id FROM comments WHERE id = $1', [commentId]);
+        const ownerId = owner.rows?.[0]?.user_id;
+        const postId = owner.rows?.[0]?.post_id;
+        if (ownerId) {
+          await createNotification({
+            userId: ownerId,
+            actorId: userId,
+            type: 'comment_liked',
+            postId,
+            commentId,
+            data: { commentId, postId }
+          });
+        }
+      } catch (e) {
+        console.warn('Falha ao gerar notificação de like no comentário:', e?.message);
+      }
     }
 
   } catch (error) {

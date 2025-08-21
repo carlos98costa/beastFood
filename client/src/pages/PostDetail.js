@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import CommentsModal from '../components/CommentsModal';
 import './PostDetail.css';
+import './Home.css';
+import { resolveUrl } from '../utils/resolveUrl';
+import { FaStar, FaHeart, FaRegHeart, FaComment } from 'react-icons/fa';
+import axios from 'axios';
 
 function PostDetail() {
   const [post, setPost] = useState(null);
@@ -11,8 +15,9 @@ function PostDetail() {
   const [commentCount, setCommentCount] = useState(0);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
   const { id } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Buscar detalhes do post
   useEffect(() => {
@@ -47,36 +52,57 @@ function PostDetail() {
     }
   }, [id, token]);
 
-  // Formatar data
+  // Formatar data (igual Home)
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return 'Agora mesmo';
-    } else if (diffInHours < 24) {
-      return `há ${diffInHours}h`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `há ${diffInDays}d`;
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffMinutes < 1) return 'Agora mesmo';
+    if (diffMinutes < 60) return `há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''}`;
+    if (diffHours < 24) return `há ${diffHours} hora${diffHours > 1 ? 's' : ''}`;
+    if (diffDays === 1) return 'Ontem';
+    if (diffDays < 7) return `há ${diffDays} dia${diffDays > 1 ? 's' : ''}`;
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Renderizar estrelas (igual Home)
+  const renderStars = (rating = 0) => (
+    [...Array(5)].map((_, index) => (
+      <FaStar key={index} className={index < rating ? 'star filled' : 'star'} />
+    ))
+  );
+
+  const handleLike = async () => {
+    if (!post || !token) return;
+    try {
+      if (post.user_liked) {
+        const res = await axios.delete(`/api/likes/${post.id}`);
+        setPost({ ...post, likes_count: res.data.likes_count, user_liked: false });
+      } else {
+        const res = await axios.post(`/api/likes/${post.id}`, {});
+        setPost({ ...post, likes_count: res.data.likes_count, user_liked: true });
+      }
+    } catch (err) {
+      // silencioso
     }
   };
 
-  // Renderizar estrelas da avaliação
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <span 
-          key={i} 
-          className={`star ${i <= rating ? 'filled' : 'empty'}`}
-        >
-          ★
-        </span>
-      );
-    }
-    return stars;
+  const handlePhotoNavigation = (direction) => {
+    if (!post?.photos || post.photos.length <= 1) return;
+    setCurrentPhotoIndex((prev) => {
+      const next = prev + direction;
+      if (next < 0 || next >= post.photos.length) return prev;
+      return next;
+    });
   };
 
   // Navegar para o restaurante
@@ -129,120 +155,96 @@ function PostDetail() {
   }
 
   return (
-    <div className="post-detail-container">
-      {/* Botão voltar */}
+    <div className="home-page post-detail-page">
+      {/* Voltar */}
       <div className="back-button-container">
-        <button onClick={() => navigate(-1)} className="back-btn">
-          ← Voltar
-        </button>
+        <button onClick={() => navigate(-1)} className="back-btn">← Voltar</button>
       </div>
 
-      {/* Cabeçalho do post */}
-      <div className="post-header">
-        <div className="post-author" onClick={handleUserClick}>
-          <div className="author-avatar">
+      <div className="post-card card hover-lift">
+        {/* Cabeçalho - igual Home */}
+        <div className="post-header">
+          <div className="post-user" onClick={handleUserClick}>
             {post.profile_picture ? (
-              <img 
-                src={post.profile_picture} 
+              <img
+                src={resolveUrl(post.profile_picture)}
                 alt={post.user_name}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
+                className="user-avatar"
+                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
               />
             ) : null}
-            <div 
-              className="author-avatar-placeholder"
-              style={{ display: post.profile_picture ? 'none' : 'flex' }}
-            >
-              {post.user_name.charAt(0).toUpperCase()}
+            <div className="user-avatar-placeholder" style={{ display: post.profile_picture ? 'none' : 'flex' }}>
+              {post.user_name?.charAt(0)}
+            </div>
+            <div className="user-info">
+              <span className="user-name">{post.user_name}</span>
+              <span className="post-date">{formatDate(post.created_at)}</span>
             </div>
           </div>
-          <div className="author-info">
-            <span className="author-name">{post.user_name}</span>
-            <span className="post-date">{formatDate(post.created_at)}</span>
+          <div className="post-header-actions">
+            <div className="restaurant-link">
+              <Link to={`/restaurant/${post.restaurant_id}`}>{post.restaurant_name}</Link>
+            </div>
           </div>
         </div>
 
-        {/* Informações do restaurante */}
-        <div className="restaurant-info" onClick={handleRestaurantClick}>
-          <div className="restaurant-icon">🏪</div>
-          <span className="restaurant-name">{post.restaurant_name}</span>
-          <span className="restaurant-address">{post.address}</span>
-        </div>
-      </div>
-
-      {/* Conteúdo do post */}
-      <div className="post-content">
-        {post.title && (
-          <h2 className="post-title">{post.title}</h2>
-        )}
-        
-        <p className="post-text">{post.content}</p>
-        
-        {/* Avaliação */}
-        <div className="post-rating">
-          <div className="rating-stars">
-            {renderStars(post.rating)}
-          </div>
-          <span className="rating-text">
-            Avaliação: {post.rating}/5
-          </span>
-        </div>
-      </div>
-
-      {/* Fotos do post */}
-      {post.photos && post.photos.length > 0 && (
-        <div className="post-photos">
-          <div className={`photos-grid photos-grid-${Math.min(post.photos.length, 4)}`}>
-            {post.photos.map((photo, index) => (
-              <div key={photo.id} className="photo-item">
-                <img 
-                  src={photo.photo_url} 
-                  alt={`Foto ${index + 1}`}
-                  className="post-photo"
+        {/* Fotos - mesmo padrão do Home */}
+        {post.photos && post.photos.length > 0 && (
+          <div className="post-images">
+            {post.photos.length === 1 ? (
+              <img
+                src={resolveUrl(post.photos[0].photo_url)}
+                alt="Post"
+                className="post-image"
+              />
+            ) : (
+              <div className="post-photos-gallery">
+                <img
+                  src={resolveUrl(post.photos[currentPhotoIndex]?.photo_url || post.photos[0].photo_url)}
+                  alt="Post"
+                  className="post-image"
                 />
+                <div className="photo-navigation">
+                  <button className="nav-arrow prev-arrow" onClick={() => handlePhotoNavigation(-1)}>‹</button>
+                  <span className="photo-counter">{currentPhotoIndex + 1} / {post.photos.length}</span>
+                  <button className="nav-arrow next-arrow" onClick={() => handlePhotoNavigation(1)}>›</button>
+                </div>
               </div>
-            ))}
+            )}
+          </div>
+        )}
+
+        {/* Conteúdo */}
+        <div className="post-content">
+          {post.title && <h3 className="post-title">{post.title}</h3>}
+          <p className="post-text">{post.content}</p>
+          <div className="post-rating">
+            {renderStars(post.rating)}
+            <span className="rating-text">{Number(post.rating || 0).toFixed(1)}/5.0</span>
           </div>
         </div>
-      )}
 
-      {/* Estatísticas do post */}
-      <div className="post-stats">
-        <div className="stat-item">
-          <span className="stat-icon">❤️</span>
-          <span className="stat-value">{post.likes_count || 0}</span>
-          <span className="stat-label">Curtidas</span>
-        </div>
-        <div className="stat-item">
-          <span className="stat-icon">💬</span>
-          <span className="stat-value">{commentCount}</span>
-          <span className="stat-label">Comentários</span>
+        {/* Ações */}
+        <div className="post-actions">
+          <button className={`action-button ${post.user_liked ? 'liked' : ''}`} onClick={handleLike}>
+            {post.user_liked ? <FaHeart className="liked" /> : <FaRegHeart />}
+            <span>{Number(post.likes_count || 0)}</span>
+          </button>
+          <button className="action-button" onClick={() => setIsCommentsModalOpen(true)}>
+            <FaComment />
+            <span>{Number(commentCount || 0)}</span>
+          </button>
         </div>
       </div>
 
-      {/* Botão para abrir comentários */}
-      <div className="comments-section">
-        <button 
-          className="view-comments-btn"
-          onClick={() => setIsCommentsModalOpen(true)}
-        >
-          💬 Ver Comentários ({commentCount})
-        </button>
-      </div>
-
-      {/* Sistema de comentários */}
-      <CommentsModal 
+      {/* Modal de comentários */}
+      <CommentsModal
         isOpen={isCommentsModalOpen}
         onClose={() => setIsCommentsModalOpen(false)}
         post={post}
         onCommentAdded={(comment, increment) => {
-          if (comment) {
-            setCommentCount(prev => prev + 1);
-          } else if (increment === -1) {
-            setCommentCount(prev => Math.max(0, prev - 1));
-          }
+          if (comment) setCommentCount((prev) => prev + 1);
+          else if (increment === -1) setCommentCount((prev) => Math.max(0, prev - 1));
         }}
       />
     </div>

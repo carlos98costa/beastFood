@@ -165,6 +165,22 @@
   padding-left: 48px;
 }
 
+/* Ajustes específicos para a aba de Links */
+.links-row {
+  grid-template-columns: 1fr; /* um por linha para evitar sobreposição dos ícones */
+}
+
+.form-section .input-icon {
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.form-section .form-group input[type="url"],
+.form-section .form-group input[type="text"] {
+  width: 100%;
+}
+
 .error-message {
   color: #e74c3c;
   font-size: 12px;

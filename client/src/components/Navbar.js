@@ -1,20 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaUtensils, FaSearch, FaPlus, FaUser, FaSignOutAlt, FaMapMarkerAlt, FaCrown } from 'react-icons/fa';
+import { MdNotifications } from 'react-icons/md';
+import axios from 'axios';
 import CreatePostModal from './CreatePostModal';
 import AdminPanel from './AdminPanel';
 import './Navbar.css';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
-  // location removido pois não estava sendo utilizado
+  const { user, logout, notificationsUnread, setNotificationsUnreadCount } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const notificationsRef = useRef(null);
 
   const resolveUrl = (url) => {
     if (!url || typeof url !== 'string') return '';
@@ -66,6 +72,9 @@ const Navbar = () => {
     if (!e.target.closest('.search-form')) {
       setShowSuggestions(false);
     }
+    if (!e.target.closest('.notifications-container')) {
+      setShowNotifications(false);
+    }
   };
 
   useEffect(() => {
@@ -87,7 +96,90 @@ const Navbar = () => {
     navigate(`/profile/${user.username}`);
   };
 
-  // isActive removido pois não estava sendo utilizado
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const res = await axios.get('/api/notifications?limit=10');
+      setNotifications(res.data.notifications || []);
+    } catch (err) {
+      setNotifications([]);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const toggleNotifications = async () => {
+    const next = !showNotifications;
+    setShowNotifications(next);
+    if (next) {
+      await fetchNotifications();
+    }
+  };
+
+  const handleNotificationClick = async (n) => {
+    try {
+      // Marcar como lida
+      if (!n.is_read) {
+        await axios.post(`/api/notifications/${n.id}/read`);
+        // Atualiza localmente para feedback instantâneo
+        setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, is_read: true } : x));
+      }
+
+      // Navegar conforme o tipo
+      if (n.post_id) {
+        navigate(`/post/${n.post_id}`);
+      } else if (n.type === 'user_followed' && n.actor_username) {
+        navigate(`/profile/${n.actor_username}`);
+      }
+
+      setShowNotifications(false);
+    } catch (_) {
+      // silencioso
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      await axios.post('/api/notifications/read-all');
+      setNotifications((prev) => prev.map((x) => ({ ...x, is_read: true })));
+      // Zerar badge imediatamente
+      setNotificationsUnreadCount(0);
+    } catch (_) {
+      // silencioso
+    }
+  };
+
+  const renderNotificationText = (n) => {
+    const actor = n.actor_name || n.actor_username || 'Alguém';
+    switch (n.type) {
+      case 'post_liked':
+        return `${actor} curtiu seu post`;
+      case 'post_commented':
+        return `${actor} comentou no seu post`;
+      case 'comment_replied':
+        return `${actor} respondeu seu comentário`;
+      case 'comment_liked':
+        return `${actor} curtiu seu comentário`;
+      case 'user_followed':
+        return `${actor} começou a te seguir`;
+      default:
+        return 'Nova atividade';
+    }
+  };
+
+  const formatRelativeTime = (iso) => {
+    if (!iso) return '';
+    const date = new Date(iso);
+    const now = new Date();
+    const diffMs = now - date;
+    const minutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (minutes < 1) return 'agora';
+    if (minutes < 60) return `há ${minutes} min`;
+    if (hours < 24) return `há ${hours} h`;
+    return `há ${days} d`;
+  };
 
   return (
     <nav className="navbar">
@@ -143,6 +235,51 @@ const Navbar = () => {
                 <span>Novo Post</span>
               </button>
               
+              {/* Notificações */}
+              <div className="notifications-container" ref={notificationsRef}>
+                <button type="button" className="nav-link notification-button" title="Notificações" onClick={toggleNotifications}>
+                  <div className="notification-icon">
+                    <MdNotifications />
+                    {notificationsUnread > 0 && (
+                      <span className="notification-badge">{notificationsUnread}</span>
+                    )}
+                  </div>
+                </button>
+                {showNotifications && (
+                  <div className="notifications-dropdown">
+                    <div className="notifications-header">
+                      <span>Notificações</span>
+                      {notifications.length > 0 && (
+                        <button className="mark-all-btn" onClick={markAllNotificationsRead}>Marcar tudo como lido</button>
+                      )}
+                    </div>
+                    {loadingNotifications ? (
+                      <div className="notifications-empty">Carregando...</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="notifications-empty">Você não tem notificações.</div>
+                    ) : (
+                      <ul className="notifications-list">
+                        {notifications.map((n) => (
+                          <li key={n.id} className={`notification-item ${n.is_read ? '' : 'unread'}`} onClick={() => handleNotificationClick(n)}>
+                            <div className="notification-avatar">
+                              {n.actor_profile_picture ? (
+                                <img src={resolveUrl(n.actor_profile_picture)} alt={n.actor_name || n.actor_username} />
+                              ) : (
+                                <div className="notification-avatar-placeholder">{(n.actor_name || n.actor_username || '?').charAt(0)}</div>
+                              )}
+                            </div>
+                            <div className="notification-content">
+                              <div className="notification-text">{renderNotificationText(n)}</div>
+                              <div className="notification-time">{formatRelativeTime(n.created_at)}</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               {/* Botão do Painel Administrativo */}
               {user?.role === 'admin' && (
                 <button 
@@ -155,24 +292,45 @@ const Navbar = () => {
                 </button>
               )}
               
+              {/* Menu do usuário */}
               <div className="user-menu">
-                <button
-                  className="user-button"
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                >
-                  {user.profile_picture ? (
-                    <img 
-                      src={resolveUrl(user.profile_picture)} 
-                      alt={user.name}
-                      className="user-avatar"
-                    />
-                  ) : (
-                    <div className="user-avatar-placeholder">
+                {user ? (
+                  <>
+                    <button 
+                      className="user-menu-trigger"
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                    >
+                      <div className="user-avatar">
+                        {user.profile_picture ? (
+                          <img 
+                            src={resolveUrl(user.profile_picture)} 
+                            alt={user.name || user.username}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="user-avatar-placeholder" style={{ display: user.profile_picture ? 'none' : 'flex' }}>
+                          {user.name?.charAt(0) || user.username?.charAt(0)}
+                        </div>
+                      </div>
+                      <span className="username">{user.name || user.username}</span>
+                      <FaUser className="user-icon" />
+                    </button>
+                  </>
+                ) : (
+                  <div className="auth-buttons">
+                    <Link to="/login" className="nav-link">
                       <FaUser />
-                    </div>
-                  )}
-                  <span className="user-name">{user.name}</span>
-                </button>
+                      Entrar
+                    </Link>
+                    <Link to="/register" className="nav-link">
+                      <FaUser />
+                      Registrar
+                    </Link>
+                  </div>
+                )}
 
                 {showUserMenu && (
                   <div className="user-dropdown">

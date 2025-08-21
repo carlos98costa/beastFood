@@ -3,6 +3,7 @@ import { FaUsers, FaUtensils, FaChartBar, FaCrown, FaEdit, FaUserPlus, FaUserMin
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import EditRestaurantModal from './EditRestaurantModal';
+import CreateRestaurantModal from './CreateRestaurantModal';
 import './AdminPanel.css';
 
 const AdminPanel = ({ onClose }) => {
@@ -17,6 +18,7 @@ const AdminPanel = ({ onClose }) => {
   // Modal de usuário removido pois não estava sendo utilizado
   const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   const [showEditRestaurantModal, setShowEditRestaurantModal] = useState(false);
+  const [showCreateRestaurantModal, setShowCreateRestaurantModal] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState(null);
 
   // Criar instância do axios configurada para este componente (memoizada)
@@ -159,6 +161,11 @@ const AdminPanel = ({ onClose }) => {
     fetchData();
   };
 
+  const handleRestaurantCreated = (createdRestaurant) => {
+    setRestaurants(prev => [createdRestaurant, ...prev]);
+    fetchData();
+  };
+
   const renderStats = () => (
     <div className="admin-stats">
       <h3>📊 Estatísticas do Sistema</h3>
@@ -266,7 +273,16 @@ const AdminPanel = ({ onClose }) => {
 
   const renderRestaurants = () => (
     <div className="admin-restaurants">
-      <h3>🏪 Gestão de Restaurantes</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
+        <h3>🏪 Gestão de Restaurantes</h3>
+        <button
+          className="action-btn add-btn"
+          onClick={() => setShowCreateRestaurantModal(true)}
+          title="Adicionar restaurante"
+        >
+          + Adicionar
+        </button>
+      </div>
       
       <div className="restaurants-table">
         <table>
@@ -444,6 +460,15 @@ const AdminPanel = ({ onClose }) => {
               setRestaurantToEdit(null);
             }}
             onRestaurantUpdated={handleRestaurantUpdated}
+          />
+        )}
+
+        {/* Modal de Criação de Restaurante */}
+        {showCreateRestaurantModal && (
+          <CreateRestaurantModal
+            isOpen={showCreateRestaurantModal}
+            onClose={() => setShowCreateRestaurantModal(false)}
+            onRestaurantCreated={handleRestaurantCreated}
           />
         )}
       </div>

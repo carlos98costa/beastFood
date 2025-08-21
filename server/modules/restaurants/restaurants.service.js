@@ -152,14 +152,23 @@ class RestaurantsService {
 
     const query = `
       SELECT r.*, 
-              COUNT(DISTINCT p.id) as posts_count,
-              COUNT(DISTINCT f.user_id) as favorites_count,
-              AVG(p.rating) as average_rating
+             COUNT(DISTINCT p.id) as posts_count,
+             COUNT(DISTINCT f.user_id) as favorites_count,
+             AVG(p.rating) as average_rating,
+             mp.photo_url AS main_photo_url,
+             COALESCE(r.image_url, mp.photo_url) AS image_url
        FROM restaurants r
        LEFT JOIN posts p ON r.id = p.restaurant_id
        LEFT JOIN favorites f ON r.id = f.restaurant_id
+       LEFT JOIN LATERAL (
+         SELECT photo_url
+         FROM restaurant_photos rp
+         WHERE rp.restaurant_id = r.id
+         ORDER BY rp.photo_order ASC, rp.created_at ASC
+         LIMIT 1
+       ) mp ON TRUE
        ${whereClause}
-       GROUP BY r.id
+       GROUP BY r.id, mp.photo_url
        ${orderClause}
        LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
     `;

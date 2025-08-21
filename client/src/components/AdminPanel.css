@@ -339,6 +339,17 @@ tr:hover {
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
+/* Inputs de erro simples usados no modal de criação */
+input.error, textarea.error {
+  border-color: #e0245e;
+}
+
+.error-message {
+  color: #e0245e;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
 .action-btn.remove-btn {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);

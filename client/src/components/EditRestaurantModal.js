@@ -7,11 +7,12 @@ import RestaurantPhotoManager from './RestaurantPhotoManager';
 import RestaurantServicesTab from './RestaurantServicesTab';
 import RestaurantHighlightsTab from './RestaurantHighlightsTab';
 import RestaurantOperatingHoursTab from './RestaurantOperatingHoursTab';
+import RestaurantLinksTab from './RestaurantLinksTab';
 import './EditRestaurantModal.css';
 
 const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated }) => {
   const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState('info'); // 'info', 'photos', 'services', 'highlights', 'operating-hours'
+  const [activeTab, setActiveTab] = useState('info'); // 'info', 'photos', 'services', 'highlights', 'operating-hours', 'links'
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -119,9 +120,7 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
       newErrors.phone = 'Telefone deve conter apenas números, espaços, parênteses, hífens e +';
     }
     
-    if (formData.website && !/^https?:\/\/.+/.test(formData.website)) {
-      newErrors.website = 'Website deve começar com http:// ou https://';
-    }
+    // Validação do website movida para a aba de Links
     
     if (formData.price_range && (formData.price_range < 1 || formData.price_range > 5)) {
       newErrors.price_range = 'Faixa de preço deve ser entre 1 e 5';
@@ -141,8 +140,9 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
     try {
       setLoading(true);
       
+      const { website: _omitWebsite, ...restForm } = formData;
       const updateData = {
-        ...formData,
+        ...restForm,
         id: restaurant.id,
         // Garantir que price_range seja um número
         price_range: formData.price_range ? parseInt(formData.price_range) : null
@@ -238,6 +238,13 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
             <FaClock />
             Horários
           </button>
+          <button
+            className={`tab-button ${activeTab === 'links' ? 'active' : ''}`}
+            onClick={() => setActiveTab('links')}
+          >
+            <FaGlobe />
+            Links
+          </button>
         </div>
 
         {/* Conteúdo das abas */}
@@ -305,21 +312,6 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
                 </div>
                 
                 <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="website">Website</label>
-                    <div className="input-icon">
-                      <FaGlobe className="input-icon" />
-                      <input
-                        type="url"
-                        id="website"
-                        value={formData.website}
-                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                        className={errors.website ? 'error' : ''}
-                      />
-                    </div>
-                    {errors.website && <div className="error-message">{errors.website}</div>}
-                  </div>
-                  
                   <div className="form-group">
                     <label htmlFor="price_range">Faixa de Preço</label>
                     <select
@@ -437,6 +429,19 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
               restaurant={restaurant}
               onOperatingHoursUpdated={(operatingHours) => {
                 console.log('Horários atualizados:', operatingHours);
+              }}
+            />
+          </div>
+        )}
+
+        {activeTab === 'links' && (
+          <div className="tab-content">
+            <RestaurantLinksTab
+              restaurant={restaurant}
+              onLinksUpdated={(updated) => {
+                if (updated && onRestaurantUpdated) {
+                  onRestaurantUpdated(updated);
+                }
               }}
             />
           </div>

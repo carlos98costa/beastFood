@@ -7,6 +7,7 @@ const compression = require('compression');
 const fs = require('fs');
 const path = require('path');
 const performanceConfig = require('./config/performance');
+const pool = require('./config/database');
 require('dotenv').config();
 
 console.log('Variáveis de ambiente carregadas:');
@@ -28,13 +29,13 @@ const restaurantOwnerRoutes = require('./modules/restaurant-owner/restaurant-own
 const restaurantRoutes = require('./routes/restaurants');
 const restaurantPhotosRoutes = require('./modules/restaurants/restaurant-photos.routes');
 const restaurantFeaturesRoutes = require('./modules/restaurants/restaurant-features.routes');
+const notificationsRoutes = require('./modules/notifications/notifications.routes');
 const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const likeRoutes = require('./routes/likes');
 const favoriteRoutes = require('./routes/favorites');
 const followRoutes = require('./routes/follows');
 const searchRoutes = require('./routes/search');
-const testRoutes = require('./routes/test');
 
 // Configurações
 const PORT = process.env.PORT || 5000;
@@ -66,11 +67,30 @@ console.log('CORS configurado para:', process.env.CLIENT_URL || 'http://localhos
 const authLimiter = rateLimit(performanceConfig.rateLimit.auth);
 const generalLimiter = rateLimit(performanceConfig.rateLimit.general);
 
-// Aplicar rate limiting específico para rotas de auth
-app.use('/api/auth', authLimiter);
+// Rate limiting específico para login (mais permissivo)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: process.env.NODE_ENV === 'production' ? 50 : 10000, // 10000 tentativas de login em desenvolvimento
+  delayMs: 0,
+  skipSuccessfulRequests: true,
+  skipFailedRequests: false,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
-// Aplicar rate limiting geral para outras rotas
-app.use('/api', generalLimiter);
+// DESABILITAR RATE LIMITING EM DESENVOLVIMENTO
+if (process.env.NODE_ENV === 'production') {
+  // Aplicar rate limiting específico para rotas de auth
+  app.use('/api/auth', authLimiter);
+  
+  // Rate limiting ainda mais permissivo para login específico
+  app.use('/api/auth/login', loginLimiter);
+  
+  // Aplicar rate limiting geral para outras rotas
+  app.use('/api', generalLimiter);
+} else {
+  console.log('🚀 Rate limiting DESABILITADO em desenvolvimento');
+}
 
 // Middleware para parsing
 app.use(express.json({ limit: '10mb' }));
@@ -108,6 +128,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Garantir colunas de links sociais na tabela restaurants
+(async () => {
+  try {
+    await pool.query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS instagram TEXT");
+    await pool.query("ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS ifood TEXT");
+    console.log('✅ Colunas instagram e ifood garantidas na tabela restaurants');
+  } catch (e) {
+    console.error('⚠️ Não foi possível garantir colunas instagram/ifood:', e.message);
+  }
+})();
+
 // Rotas modulares
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -120,13 +151,13 @@ app.use('/api/restaurant-owner', restaurantOwnerRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/restaurant-photos', restaurantPhotosRoutes);
 app.use('/api/restaurant-features', restaurantFeaturesRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/follows', followRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/test', testRoutes);
 
 // Rota de teste
 app.get('/api/health', (req, res) => {
@@ -199,9 +230,11 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor BeastFood v2.3 rodando na porta ${PORT}`);
-  console.log(`📱 API disponível em: http://localhost:${PORT}/api`);
+  console.log(`📱 API disponível em:`);
+  console.log(`   🌐 Local: http://localhost:${PORT}/api`);
+  console.log(`   📱 Rede: http://192.168.100.2:${PORT}/api`);
   console.log(`🔒 Autenticação com refresh tokens habilitada`);
   console.log(`🗺️  Geolocalização com PostGIS habilitada`);
   console.log(`🏪 API de Estabelecimentos implementada`);

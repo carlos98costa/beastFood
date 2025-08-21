@@ -7,7 +7,6 @@ import './Register.css';
 
 function Register() {
   const [formData, setFormData] = useState({
-    name: '',
     username: '',
     email: '',
     password: '',
@@ -130,34 +129,29 @@ function Register() {
             className="register-button" 
             disabled={loading}
           >
-            {loading ? 'Criando conta...' : 'Criar conta'}
+            {loading ? 'Criando conta...' : 'Criar Conta'}
           </button>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+            <GoogleLogin
+            onSuccess={(user) => {
+              toast.success(`Bem-vindo, ${user.name}!`);
+              navigate('/');
+            }}
+            onError={(error) => {
+              toast.error(error);
+            }}
+            buttonText="Criar conta com Google"
+            className="google-login-full"
+            />
+          </div>
+
+          <div className="register-footer">
+            <p>
+              Já tem uma conta? <Link to="/login">Faça login</Link>
+            </p>
+          </div>
         </form>
-
-        <span style={{ display: 'block', textAlign: 'center', margin: '15px 0' }}>ou</span>
-
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <GoogleLogin
-          onSuccess={(user) => {
-            toast.success(`Bem-vindo, ${user.name}!`);
-            navigate('/');
-          }}
-          onError={(error) => {
-            toast.error(error);
-          }}
-          buttonText="Criar conta com Google"
-          className="google-login-full"
-          />
-        </div>
-
-        <div className="register-footer">
-          <p>
-            Já tem uma conta?{' '}
-            <Link to="/login" className="link">
-              Faça login aqui
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );

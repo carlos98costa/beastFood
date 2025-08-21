@@ -1,4 +1,29 @@
 // Configurações de performance para o servidor BeastFood
+require('dotenv').config();
+
+// Constrói a lista de origens permitidas para CORS
+const buildAllowedOrigins = () => {
+	const origins = [];
+	if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
+	if (process.env.CLIENT_URLS) {
+		origins.push(
+			...process.env.CLIENT_URLS
+				.split(',')
+				.map((s) => s.trim())
+				.filter(Boolean)
+		);
+	}
+	// Origens padrão para desenvolvimento local
+	origins.push(
+		'http://localhost:3000',
+		'http://127.0.0.1:3000',
+		'http://192.168.100.2:3000',
+		'http://192.168.100.2:5000',
+		// IP adicional solicitado para acesso ao backend
+		'http://186.210.177.159:3000'
+	);
+	return Array.from(new Set(origins));
+};
 
 module.exports = {
   // Configurações de compressão
@@ -28,15 +53,21 @@ module.exports = {
   rateLimit: {
     auth: {
       windowMs: 15 * 60 * 1000, // 15 minutos
-      max: process.env.NODE_ENV === 'production' ? 20 : 500, // Aumentado para desenvolvimento
+      max: process.env.NODE_ENV === 'production' ? 20 : 5000, // Aumentado para 5000 em desenvolvimento
       delayMs: 0, // Sem delay para melhor performance
-      skipSuccessfulRequests: true
+      skipSuccessfulRequests: true,
+      skipFailedRequests: false,
+      standardHeaders: true,
+      legacyHeaders: false
     },
     general: {
       windowMs: 15 * 60 * 1000, // 15 minutos
-      max: process.env.NODE_ENV === 'production' ? 200 : 5000, // Aumentado para desenvolvimento
+      max: process.env.NODE_ENV === 'production' ? 200 : 50000, // Aumentado para 50000 em desenvolvimento
       delayMs: 0, // Sem delay para melhor performance
-      skipSuccessfulRequests: true
+      skipSuccessfulRequests: true,
+      skipFailedRequests: false,
+      standardHeaders: true,
+      legacyHeaders: false
     }
   },
 
@@ -61,12 +92,13 @@ module.exports = {
 
   // Configurações de CORS otimizadas
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    // Aceita múltiplas origens (local + IP da rede)
+    origin: buildAllowedOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
-      'Content-Type', 
-      'Authorization', 
+      'Content-Type',
+      'Authorization',
       'X-Requested-With',
       'Cache-Control',
       'Pragma',

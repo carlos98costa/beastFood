@@ -230,11 +230,13 @@ class RestaurantFeaturesController {
       }
       
       await restaurantFeaturesService.updateRestaurantOperatingHours(restaurantId, operatingHours);
+      // Retornar a lista atualizada a partir do banco para refletir normalizações
+      const updated = await restaurantFeaturesService.getRestaurantOperatingHours(restaurantId);
       
       res.json({ 
         success: true, 
         message: 'Horários atualizados com sucesso',
-        operatingHours 
+        operatingHours: updated 
       });
       
     } catch (error) {

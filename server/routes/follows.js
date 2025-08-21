@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const auth = require('../middleware/auth');
+const { createNotification } = require('../modules/notifications/notifications.service');
 
 const router = express.Router();
 
@@ -39,6 +40,18 @@ router.post('/:userId', auth, async (req, res) => {
       'INSERT INTO follows (follower_id, following_id) VALUES ($1, $2)',
       [followerId, userId]
     );
+
+    // Notificar usuário seguido
+    try {
+      await createNotification({
+        userId: parseInt(userId),
+        actorId: followerId,
+        type: 'user_followed',
+        data: {}
+      });
+    } catch (e) {
+      console.warn('Falha ao gerar notificação de follow:', e?.message);
+    }
 
     res.json({
       message: 'Usuário seguido com sucesso!'

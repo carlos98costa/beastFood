@@ -21,6 +21,7 @@ import RestaurantCard from '../components/RestaurantCard';
 import OperatingHoursModal from '../components/OperatingHoursModal';
 import './RestaurantDetail.css';
 import './Home.css';
+import { resolveUrl } from '../utils/resolveUrl';
 
 const RestaurantDetail = () => {
   const { id } = useParams();
@@ -391,7 +392,12 @@ const RestaurantDetail = () => {
       nextOpen: restaurantStatus.nextOpen,
       photos: photos,
       isFavorite: isFavorite,
-      favoritesCount: favoritesCount
+      favoritesCount: favoritesCount,
+      social: {
+        instagram: restaurant.instagram || restaurant.instagram_url || restaurant.social_instagram || null,
+        ifood: restaurant.ifood || restaurant.ifood_url || restaurant.social_ifood || null,
+        website: restaurant.menu_url || restaurant.cardapio_url || restaurant.website || null
+      }
     };
     
     console.log('🔍 Debug restaurantCardData - resultado final:', result);
@@ -528,7 +534,7 @@ const RestaurantDetail = () => {
                   <div className="post-user">
                     {post.profile_picture ? (
                       <img 
-                        src={post.profile_picture} 
+                        src={resolveUrl(post.profile_picture)} 
                         alt={post.user_name}
                         className="user-avatar"
                         onError={(e) => {
@@ -576,14 +582,14 @@ const RestaurantDetail = () => {
                   <div className="post-images">
                     {post.photos.length === 1 ? (
                       <img 
-                        src={post.photos[0].photo_url} 
+                        src={resolveUrl(post.photos[0].photo_url)} 
                         alt="Post"
                         className="post-image"
                       />
                     ) : (
                       <div className="post-photos-gallery">
                         <img 
-                          src={post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url} 
+                          src={resolveUrl(post.photos[currentPhotoIndex[post.id] || 0]?.photo_url || post.photos[0].photo_url)} 
                           alt="Post"
                           className="post-image"
                         />
@@ -634,14 +640,14 @@ const RestaurantDetail = () => {
                     ) : (
                       <FaRegHeart />
                     )}
-                    <span>{post.likes_count || 0}</span>
+                    <span>{Number(post.likes_count || 0)}</span>
                   </button>
                   <button 
                     className="action-button"
                     onClick={() => handleShowComments(post)}
                   >
                     <FaComment />
-                    <span>{post.comments_count || 0}</span>
+                    <span>{Number(post.comments_count || 0)}</span>
                   </button>
                 </div>
               </div>
@@ -687,7 +693,7 @@ const RestaurantDetail = () => {
             setPosts(prev => 
               prev.map(post => 
                 post.id === postToComment.id 
-                  ? { ...post, comments_count: (post.comments_count || 0) + 1 }
+                  ? { ...post, comments_count: Number(post.comments_count || 0) + 1 }
                   : post
               )
             );

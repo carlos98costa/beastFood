@@ -2,6 +2,29 @@ const pool = require('../../config/database');
 
 class RestaurantFeaturesService {
   
+  async ensureOperatingHoursTable() {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS restaurant_operating_hours (
+          id SERIAL PRIMARY KEY,
+          restaurant_id INT REFERENCES restaurants(id) ON DELETE CASCADE,
+          day_of_week INT NOT NULL,
+          open_time TIME NULL,
+          close_time TIME NULL,
+          is_closed BOOLEAN DEFAULT true
+        );
+      `);
+      // Índice para busca rápida por restaurante/dia
+      await pool.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_operating_hours_unique 
+        ON restaurant_operating_hours (restaurant_id, day_of_week);
+      `);
+    } catch (error) {
+      console.error('Erro ao garantir tabela restaurant_operating_hours:', error);
+      // Não lançar para não quebrar fluxo em produção; o SELECT subsequente indicará falha
+    }
+  }
+  
   // ===== SERVIÇOS =====
   
   // Buscar opções de serviços de um restaurante
@@ -125,10 +148,42 @@ class RestaurantFeaturesService {
   // Buscar horários de funcionamento
   async getRestaurantOperatingHours(restaurantId) {
     try {
+      // Garantir que a tabela exista
+      await this.ensureOperatingHoursTable();
+      // Buscar registros existentes
       const result = await pool.query(
         'SELECT * FROM restaurant_operating_hours WHERE restaurant_id = $1 ORDER BY day_of_week',
         [restaurantId]
       );
+
+      // Se não houver registros, inicializar padrão (todos fechados)
+      if (!result.rows || result.rows.length === 0) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          for (let day = 0; day <= 6; day += 1) {
+            await client.query(
+              `INSERT INTO restaurant_operating_hours (restaurant_id, day_of_week, open_time, close_time, is_closed)
+               VALUES ($1, $2, $3, $4, true)`,
+              [restaurantId, day, '00:00:00', '00:00:00']
+            );
+          }
+          await client.query('COMMIT');
+        } catch (e) {
+          await client.query('ROLLBACK');
+          throw e;
+        } finally {
+          client.release();
+        }
+
+        // Buscar novamente após inicializar
+        const seeded = await pool.query(
+          'SELECT * FROM restaurant_operating_hours WHERE restaurant_id = $1 ORDER BY day_of_week',
+          [restaurantId]
+        );
+        return seeded.rows;
+      }
+
       return result.rows;
     } catch (error) {
       console.error('Erro ao buscar horários do restaurante:', error);
@@ -140,13 +195,15 @@ class RestaurantFeaturesService {
   async updateRestaurantOperatingHours(restaurantId, operatingHours) {
     const client = await pool.connect();
     try {
+      // Garantir que a tabela exista
+      await this.ensureOperatingHoursTable();
       await client.query('BEGIN');
       
       // Atualizar horários existentes
       for (const hour of operatingHours) {
         await client.query(
           `UPDATE restaurant_operating_hours 
-           SET open_time = $1, close_time = $2, is_closed = $3, updated_at = CURRENT_TIMESTAMP
+           SET open_time = $1, close_time = $2, is_closed = $3
            WHERE restaurant_id = $4 AND day_of_week = $5`,
           [hour.openTime, hour.closeTime, hour.isClosed, restaurantId, hour.dayOfWeek]
         );
@@ -166,14 +223,62 @@ class RestaurantFeaturesService {
   // Verificar se restaurante está aberto
   async isRestaurantOpen(restaurantId) {
     try {
-      const result = await pool.query(
-        'SELECT is_restaurant_open($1) as is_open',
+      // 1) Buscar horários cadastrados
+      const hoursResult = await pool.query(
+        'SELECT day_of_week, open_time, close_time, is_closed FROM restaurant_operating_hours WHERE restaurant_id = $1',
         [restaurantId]
       );
-      return result.rows[0].is_open;
+
+      const operatingHours = hoursResult.rows;
+      if (!operatingHours || operatingHours.length === 0) {
+        // Sem horários cadastrados, considerar fechado
+        return false;
+      }
+
+      // 2) Obter data/hora atual no fuso de Brasília
+      const nowInSaoPaulo = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' })
+      );
+      const currentDay = nowInSaoPaulo.getDay(); // 0 = Domingo
+
+      const timeString = nowInSaoPaulo
+        .toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour12: false })
+        .split(':');
+      const currentMinutes = parseInt(timeString[0], 10) * 60 + parseInt(timeString[1], 10);
+
+      // 3) Encontrar horário do dia atual
+      const todayHours = operatingHours.find(h => h.day_of_week === currentDay);
+      if (!todayHours || todayHours.is_closed) {
+        return false;
+      }
+
+      // 4) Comparar horário atual com janela de funcionamento
+      const [openH, openM] = String(todayHours.open_time).split(':').map(v => parseInt(v, 10));
+      const [closeH, closeM] = String(todayHours.close_time).split(':').map(v => parseInt(v, 10));
+      const openMinutes = openH * 60 + openM;
+      const closeMinutes = closeH * 60 + closeM;
+
+      // Caso padrão (não cruza meia-noite)
+      if (closeMinutes > openMinutes) {
+        return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+      }
+
+      // Caso cruza a meia-noite (ex.: 22:00 -> 02:00)
+      // Aberto se agora >= open ou agora < close
+      return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
     } catch (error) {
       console.error('Erro ao verificar se restaurante está aberto:', error);
-      throw error;
+      // Em caso de falha, tentar usar a função SQL (se existir) como último recurso
+      try {
+        const fallback = await pool.query(
+          'SELECT is_restaurant_open($1) as is_open',
+          [restaurantId]
+        );
+        return fallback.rows?.[0]?.is_open ?? false;
+      } catch (innerErr) {
+        console.error('Falha no fallback is_restaurant_open:', innerErr);
+        return false;
+      }
     }
   }
 

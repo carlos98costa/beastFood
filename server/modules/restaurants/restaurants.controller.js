@@ -47,6 +47,11 @@ class RestaurantsController {
         return res.status(404).json({ error: 'Restaurante não encontrado' });
       }
 
+      // Normalizar estrutura de dados para consistência com lista de restaurantes
+      if (restaurant.main_photo && restaurant.main_photo.photo_url) {
+        restaurant.main_photo_url = restaurant.main_photo.photo_url;
+      }
+
       res.json({ restaurant });
 
     } catch (error) {
