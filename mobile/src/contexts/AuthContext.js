@@ -6,7 +6,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import Constants from 'expo-constants';
 
 // Configurar axios para mobile
-axios.defaults.baseURL = 'http://192.168.100.2:5000';
+axios.defaults.baseURL = 'http://186.210.58.15:5000';
 axios.defaults.timeout = 10000;
 
 // Necessário para completar sessões de auth no Android/iOS

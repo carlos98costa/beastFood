@@ -151,12 +151,36 @@ class RestaurantsService {
     }
 
     const query = `
-      SELECT r.*, 
-             COUNT(DISTINCT p.id) as posts_count,
-             COUNT(DISTINCT f.user_id) as favorites_count,
-             AVG(p.rating) as average_rating,
-             mp.photo_url AS main_photo_url,
-             COALESCE(r.image_url, mp.photo_url) AS image_url
+      SELECT 
+        r.id,
+        r.name,
+        r.description,
+        r.address,
+        r.location,
+        r.created_by,
+        r.created_at,
+        r.owner_id,
+        r.phone_number,
+        r.website,
+        r.business_hours,
+        r.phone,
+        r.cuisine_type,
+        r.price_range,
+        r.source_type,
+        r.source_id,
+        r.updated_at,
+        r.instagram,
+        r.ifood,
+        r.external_id,
+        r.source,
+        r.status,
+        r.approved_by,
+        r.approved_at,
+        COUNT(DISTINCT p.id) as posts_count,
+        COUNT(DISTINCT f.user_id) as favorites_count,
+        AVG(p.rating) as average_rating,
+        mp.photo_url AS main_photo_url,
+        mp.photo_url AS image_url
        FROM restaurants r
        LEFT JOIN posts p ON r.id = p.restaurant_id
        LEFT JOIN favorites f ON r.id = f.restaurant_id
@@ -168,7 +192,12 @@ class RestaurantsService {
          LIMIT 1
        ) mp ON TRUE
        ${whereClause}
-       GROUP BY r.id, mp.photo_url
+       GROUP BY 
+        r.id, r.name, r.description, r.address, r.location, r.created_by, r.created_at,
+        r.owner_id, r.phone_number, r.website, r.business_hours,
+        r.phone, r.cuisine_type, r.price_range, r.source_type,
+        r.source_id, r.updated_at, r.instagram, r.ifood, r.external_id, r.source,
+        r.status, r.approved_by, r.approved_at, mp.photo_url
        ${orderClause}
        LIMIT $${valueIndex} OFFSET $${valueIndex + 1}
     `;

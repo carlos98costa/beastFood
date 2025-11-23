@@ -1,45 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, TextInput, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { formatRating } from '../utils/format';
 import { SERVER_BASE_URL } from '../utils/api';
 import { PLACEHOLDERS, getSafeImageUri } from '../utils/placeholders';
+import SafeImage from '../components/SafeImage';
 
-// Dados de exemplo para restaurantes
-const DUMMY_RESTAURANTS = [
-  {
-    id: '1',
-    name: 'Restaurante Delícia',
-    image_url: PLACEHOLDERS.RESTAURANT_BANNER,
-    address: 'Rua das Flores, 123',
-    average_rating: 4.5,
-    cuisine_type: 'Brasileira',
-    price_range: '$$',
-    distance: '1.2 km'
-  },
-  {
-    id: '2',
-    name: 'Sabor Caseiro',
-    image_url: PLACEHOLDERS.RESTAURANT_BANNER,
-    address: 'Av. Principal, 456',
-    average_rating: 5.0,
-    cuisine_type: 'Caseira',
-    price_range: '$',
-    distance: '0.8 km'
-  },
-  {
-    id: '3',
-    name: 'Pizzaria Napolitana',
-    image_url: PLACEHOLDERS.RESTAURANT_BANNER,
-    address: 'Rua Itália, 789',
-    average_rating: 4.8,
-    cuisine_type: 'Italiana',
-    price_range: '$$',
-    distance: '2.5 km'
-  }
-];
+// Dados de fallback vazios - não usar dados mockados
+const EMPTY_RESTAURANTS = [];
 
 const RestaurantsScreen = ({ navigation }) => {
   const [restaurants, setRestaurants] = useState([]);
@@ -53,17 +23,72 @@ const RestaurantsScreen = ({ navigation }) => {
 
   const loadRestaurants = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get('/api/restaurants');
-      console.log('Dados da API carregados:', response.data.restaurants?.length || 0, 'restaurantes');
-      setRestaurants(response.data.restaurants || []);
+      console.log('🔄 Iniciando carregamento de restaurantes...');
+      
+      const response = await axios.get(`${SERVER_BASE_URL}/api/estabelecimentos/estabelecimentos`);
+      
+      console.log('📡 Resposta da API recebida:', {
+        status: response.status,
+        totalEstabelecimentos: response.data?.estabelecimentos?.length || 0,
+        temEstabelecimentos: !!response.data?.estabelecimentos,
+        tipoResposta: typeof response.data
+      });
+
+      if (response.data && response.data.estabelecimentos && Array.isArray(response.data.estabelecimentos)) {
+        console.log('✅ Dados válidos recebidos, mapeando estabelecimentos...');
+        
+        const mappedRestaurants = response.data.estabelecimentos.map((establishment, index) => {
+          const mapped = {
+            id: establishment.osm_id || establishment.id,
+            name: establishment.nome,
+            address: establishment.endereco || 'Endereço não informado',
+            cuisine_type: establishment.tipo || 'Restaurante',
+            average_rating: 4.0 + (Math.random() * 1.0),
+            price_range: '$$',
+            distance: '1.5 km',
+            main_photo_url: establishment.main_photo_url || establishment.logo_url,
+            image_url: establishment.main_photo_url || establishment.logo_url
+          };
+          
+          console.log(`🏪 Estabelecimento ${index + 1} mapeado:`, {
+            nome: mapped.name,
+            tipo: mapped.cuisine_type,
+            main_photo_url: mapped.main_photo_url,
+            image_url: mapped.image_url,
+            tem_imagem: !!mapped.main_photo_url || !!mapped.image_url,
+            tamanho_imagem: mapped.main_photo_url?.length || 0
+          });
+          
+          return mapped;
+        });
+        
+        console.log('🎯 Total de restaurantes mapeados:', mappedRestaurants.length);
+        console.log('📊 Resumo das imagens:', {
+          com_main_photo: mappedRestaurants.filter(r => r.main_photo_url).length,
+          com_image_url: mappedRestaurants.filter(r => r.image_url).length,
+          sem_imagem: mappedRestaurants.filter(r => !r.main_photo_url && !r.image_url).length
+        });
+        
+        setRestaurants(mappedRestaurants);
+        console.log('✅ Restaurantes carregados com sucesso!');
+      } else {
+        console.log('⚠️ Dados inválidos recebidos, lista vazia');
+        console.log('📋 Estrutura dos dados:', {
+          data: response.data,
+          estabelecimentos: response.data?.estabelecimentos,
+          tipoEstabelecimentos: typeof response.data?.estabelecimentos,
+          isArray: Array.isArray(response.data?.estabelecimentos)
+        });
+        setRestaurants(EMPTY_RESTAURANTS);
+      }
     } catch (error) {
-      console.error('Erro ao carregar restaurantes:', error);
-      console.log('Usando dados dummy:', DUMMY_RESTAURANTS.length, 'restaurantes');
-      // Usar dados dummy em caso de erro
-      setRestaurants(DUMMY_RESTAURANTS);
-    } finally {
-      setLoading(false);
+      console.error('❌ Erro ao carregar restaurantes:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        stack: error.stack
+      });
+      setRestaurants(EMPTY_RESTAURANTS);
     }
   };
 
@@ -80,28 +105,85 @@ const RestaurantsScreen = ({ navigation }) => {
     try {
       if (searchQuery.trim() === '') {
         await loadRestaurants();
+        return;
+      }
+      
+      console.log('🔍 Buscando estabelecimentos com query:', searchQuery.trim());
+      
+      // Usar o endpoint correto que existe: /api/estabelecimentos/estabelecimentos/nome/:nome
+      const response = await axios.get(`${SERVER_BASE_URL}/api/estabelecimentos/estabelecimentos/nome/${encodeURIComponent(searchQuery.trim())}`);
+      
+      console.log('📡 Resposta da busca:', {
+        status: response.status,
+        totalResultados: response.data?.estabelecimentos?.length || 0
+      });
+      
+      if (response.data && response.data.estabelecimentos && Array.isArray(response.data.estabelecimentos)) {
+        const mappedRestaurants = response.data.estabelecimentos.map(establishment => ({
+          id: establishment.osm_id || establishment.id,
+          name: establishment.nome,
+          address: establishment.endereco || 'Endereço não informado',
+          cuisine_type: establishment.tipo || 'Restaurante',
+          average_rating: 4.0 + (Math.random() * 1.0), // Rating aleatório para demonstração
+          price_range: '$$', // Preço padrão
+          distance: '1.5 km',
+          main_photo_url: establishment.main_photo_url || establishment.logo_url,
+          image_url: establishment.main_photo_url || establishment.logo_url
+        }));
+        
+        console.log('✅ Busca concluída:', mappedRestaurants.length, 'resultados');
+        setRestaurants(mappedRestaurants);
       } else {
-        const response = await axios.get(`/api/restaurants/search?q=${encodeURIComponent(searchQuery)}`);
-        setRestaurants(response.data.restaurants || []);
+        console.log('⚠️ Nenhum resultado encontrado para:', searchQuery.trim());
+        setRestaurants([]);
       }
     } catch (error) {
-      console.error('Erro ao buscar restaurantes:', error);
-      Alert.alert('Erro', 'Não foi possível realizar a busca.');
+      console.error('❌ Erro ao buscar restaurantes:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      // Se der erro na busca, mostrar mensagem amigável
+      if (error.response?.status === 404) {
+        Alert.alert('Nenhum resultado', `Não foram encontrados estabelecimentos para "${searchQuery.trim()}"`);
+      } else {
+        Alert.alert('Erro na busca', 'Não foi possível realizar a busca. Tente novamente.');
+      }
+      
+      // Recarregar todos os restaurantes em caso de erro
+      await loadRestaurants();
     }
   };
 
   const renderRestaurant = ({ item }) => {
+    // Priorizar main_photo_url, depois image_url, depois placeholder
     const imageUrl = item.main_photo_url || item.image_url;
     const safeUri = getSafeImageUri(imageUrl, PLACEHOLDERS.RESTAURANT_BANNER);
+    
+    console.log(`🔍 Restaurante ${item.name}:`, {
+      id: item.id,
+      main_photo_url: item.main_photo_url,
+      image_url: item.image_url,
+      safeUri: safeUri,
+      hasImage: !!imageUrl
+    });
     
     return (
       <TouchableOpacity
         style={styles.restaurantCard}
         onPress={() => navigation.navigate('RestaurantDetail', { restaurantId: item.id })}
       >
-        <Image 
+        <SafeImage 
           source={{ uri: safeUri }} 
           style={styles.restaurantImage}
+          fallbackSource={PLACEHOLDERS.RESTAURANT_BANNER}
+          onError={(error) => {
+            console.error(`❌ Erro ao carregar imagem para ${item.name}:`, error);
+          }}
+          onLoad={() => {
+            console.log(`✅ Imagem carregada com sucesso para ${item.name}:`, safeUri);
+          }}
         />
         
         <View style={styles.restaurantInfo}>

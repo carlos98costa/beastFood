@@ -17,11 +17,11 @@ export const generatePlaceholder = (width = 100, height = 100, text = '?', bgCol
 };
 
 /**
- * Common placeholder images
+ * Common placeholder images - Versão compatível com React Native
  */
-// Placeholders SVG robustos e compatíveis
 const createSimplePlaceholder = (width, height, bgColor, textColor, text) => {
-  return `data:image/svg+xml;base64,${btoa(`<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${bgColor}"/><text x="50%" y="50%" font-family="Arial,sans-serif" font-size="16" fill="${textColor}" text-anchor="middle" dominant-baseline="middle">${text}</text></svg>`)}`;
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${bgColor}"/><text x="50%" y="50%" font-family="Arial,sans-serif" font-size="16" fill="${textColor}" text-anchor="middle" dominant-baseline="middle">${text}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
 export const PLACEHOLDERS = {
@@ -34,7 +34,7 @@ export const PLACEHOLDERS = {
   POST_IMAGE: createSimplePlaceholder(300, 200, '#f8fafc', '#64748b', 'Foto'),
 };
 
-// Teste: placeholder simples para debug
+// Placeholder simples para debug - URL externa que funciona no React Native
 export const SIMPLE_PLACEHOLDER = 'https://via.placeholder.com/600x200/cccccc/666666?text=Teste+Imagem';
 
 /**
@@ -43,32 +43,84 @@ export const SIMPLE_PLACEHOLDER = 'https://via.placeholder.com/600x200/cccccc/66
  * @param {string} placeholder - Placeholder to use as fallback
  * @returns {string} Safe image URI
  */
-export const getSafeImageUri = (imageUrl, placeholder) => {
-  if (!imageUrl) {
-    return placeholder;
+export const getSafeImageUri = (imageUrl, fallbackPlaceholder) => {
+  console.log('🔍 getSafeImageUri chamada com:', {
+    imageUrl: imageUrl,
+    tipoImageUrl: typeof imageUrl,
+    tamanhoImageUrl: imageUrl?.length || 0,
+    fallbackPlaceholder: fallbackPlaceholder
+  });
+
+  // Se não há URL, usar placeholder
+  if (!imageUrl || imageUrl.trim() === '') {
+    console.log('🔄 Usando placeholder: URL vazia ou nula');
+    return fallbackPlaceholder;
   }
-  
-  // Se for uma URL do servidor local, usar diretamente
-  if (imageUrl.startsWith('http://') && (imageUrl.includes('localhost') || imageUrl.includes('192.168') || imageUrl.includes('127.0.0.1'))) {
+
+  // Se já é uma imagem base64 válida, usar diretamente
+  if (imageUrl.startsWith('data:image/')) {
+    console.log('✅ Imagem base64 válida detectada');
+    console.log('📏 Tamanho da string base64:', imageUrl.length);
+    console.log('🔤 Primeiros 100 caracteres:', imageUrl.substring(0, 100));
+    
+    // Verificar se a string base64 é válida
+    try {
+      // Tentar decodificar para verificar se é válida
+      if (imageUrl.includes('base64,')) {
+        const base64Data = imageUrl.split('base64,')[1];
+        if (base64Data && base64Data.length > 0) {
+          console.log('✅ Base64 válido, retornando imagem');
+          return imageUrl;
+        }
+      }
+      console.log('⚠️ Base64 inválido, usando placeholder');
+      return fallbackPlaceholder;
+    } catch (error) {
+      console.log('❌ Erro ao validar base64:', error.message);
+      return fallbackPlaceholder;
+    }
+  }
+
+  // Se é uma URL HTTP/HTTPS válida, usar
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    console.log('✅ URL HTTP válida detectada');
     return imageUrl;
   }
-  
-  // Se for um caminho relativo, assumir que é do servidor
-  if (!imageUrl.startsWith('http')) {
-    const fullUrl = `${SERVER_BASE_URL}${imageUrl}`;
-    return fullUrl;
-  }
-  
-  // Bloquear URLs externas problemáticas
-  if (imageUrl.includes('images.unsplash.com') ||
-      imageUrl.includes('randomuser.me')) {
-    return placeholder;
-  }
-  
-  // Permitir via.placeholder.com temporariamente para debug
-  if (imageUrl.includes('via.placeholder.com')) {
+
+  // Se é um arquivo local, usar
+  if (imageUrl.startsWith('file://') || imageUrl.startsWith('content://')) {
+    console.log('✅ Arquivo local detectado');
     return imageUrl;
   }
+
+  // Para qualquer outro caso, usar placeholder
+  console.log('🔄 Usando placeholder: formato não suportado');
+  console.log('❌ Tipo de URL não reconhecido:', {
+    url: imageUrl,
+    tipo: typeof imageUrl,
+    primeirosCaracteres: imageUrl.substring(0, 50)
+  });
+  return fallbackPlaceholder;
+};
+
+/**
+ * Função para validar e limpar URLs de imagem
+ * @param {string} imageUrl - URL da imagem
+ * @returns {string} URL limpa e válida
+ */
+export const cleanImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
   
-  return imageUrl;
+  // Remover espaços em branco
+  let cleaned = imageUrl.trim();
+  
+  // Verificar se é base64 válido
+  if (cleaned.startsWith('data:image/')) {
+    // Garantir que o formato está correto
+    if (cleaned.includes('base64,')) {
+      return cleaned;
+    }
+  }
+  
+  return cleaned;
 };

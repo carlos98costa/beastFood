@@ -17,10 +17,10 @@ const buildAllowedOrigins = () => {
 	origins.push(
 		'http://localhost:3000',
 		'http://127.0.0.1:3000',
-		'http://192.168.100.2:3000',
-		'http://192.168.100.2:5000',
+		'http://186.210.58.15:3000',
+		'http://186.210.58.15:5000',
 		// IP adicional solicitado para acesso ao backend
-		'http://186.210.177.159:3000'
+		'http://186.210.58.15:3000'
 	);
 	return Array.from(new Set(origins));
 };

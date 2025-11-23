@@ -149,6 +149,16 @@ async function markAllAsRead(userId) {
   return { success: true };
 }
 
+async function clearAllNotifications(userId) {
+  await pool.query(
+    `DELETE FROM notifications WHERE user_id = $1`,
+    [userId]
+  );
+  const unread = 0;
+  sendEventToUser(userId, 'unread_count', { unread });
+  return { success: true, message: 'Todas as notificações foram removidas' };
+}
+
 function verifyTokenFromQuery(token) {
   if (!token) return null;
   try {
@@ -169,6 +179,7 @@ module.exports = {
   listNotifications,
   markAsRead,
   markAllAsRead,
+  clearAllNotifications,
   getUnreadCount
 };
 

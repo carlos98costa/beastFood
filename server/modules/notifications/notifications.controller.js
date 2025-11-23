@@ -6,6 +6,7 @@ const {
   listNotifications,
   markAsRead,
   markAllAsRead,
+  clearAllNotifications,
   getUnreadCount
 } = require('./notifications.service');
 
@@ -85,6 +86,13 @@ class NotificationsController {
     await ensureNotificationsTable();
     const userId = req.user.id;
     const result = await markAllAsRead(userId);
+    res.json(result);
+  }
+
+  async clearAll(req, res) {
+    await ensureNotificationsTable();
+    const userId = req.user.id;
+    const result = await clearAllNotifications(userId);
     res.json(result);
   }
 }

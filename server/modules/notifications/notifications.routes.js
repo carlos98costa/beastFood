@@ -22,6 +22,9 @@ router.post('/:id/read', auth, (req, res) => NotificationsController.markRead(re
 // Marcar todas como lidas
 router.post('/read-all', auth, (req, res) => NotificationsController.markAll(req, res));
 
+// Deletar todas as notificações
+router.delete('/clear-all', auth, (req, res) => NotificationsController.clearAll(req, res));
+
 module.exports = router;
 
 

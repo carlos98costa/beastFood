@@ -154,6 +154,21 @@ const Navbar = () => {
     }
   };
 
+  const handleClearAllNotifications = async () => {
+    if (!window.confirm('Tem certeza que deseja remover todas as notificações? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    try {
+      await axios.delete('/api/notifications/clear-all');
+      setNotifications([]);
+      setNotificationsUnreadCount(0);
+      setShowNotifications(false);
+    } catch (error) {
+      console.error('Erro ao limpar notificações:', error);
+    }
+  };
+
   const renderNotificationText = (n) => {
     const actor = n.actor_name || n.actor_username || 'Alguém';
     switch (n.type) {
@@ -261,7 +276,10 @@ const Navbar = () => {
                     <div className="notifications-header">
                       <span>Notificações</span>
                       {notifications.length > 0 && (
-                        <button className="mark-all-btn" onClick={markAllNotificationsRead}>Marcar tudo como lido</button>
+                        <div className="notifications-actions">
+                          <button className="mark-all-btn" onClick={markAllNotificationsRead}>Marcar tudo como lido</button>
+                          <button className="clear-all-btn" onClick={handleClearAllNotifications}>Limpar Todas</button>
+                        </div>
                       )}
                     </div>
                     {loadingNotifications ? (

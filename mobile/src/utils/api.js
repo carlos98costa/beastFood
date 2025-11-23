@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // URL base da API (mesmo host do AuthContext)
 // Ajuste para o IP da sua máquina na rede local quando testar no dispositivo físico
-const API_URL = 'http://192.168.100.2:5000/api';
+const API_URL = 'http://186.210.58.15:5000/api';
 // Exportar URLs base para reutilizar na resolução de imagens
 export const API_BASE_URL = API_URL;
 export const SERVER_BASE_URL = API_URL.replace(/\/api$/, '');

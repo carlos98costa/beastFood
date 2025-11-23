@@ -34,7 +34,7 @@ class EstabelecimentosService {
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     
     const query = `
-      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, updated_at as atualizado_em
+      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, updated_at as atualizado_em, main_photo_url, image_url
       FROM estabelecimentos
       ${whereClause}
       ORDER BY nome
@@ -50,7 +50,7 @@ class EstabelecimentosService {
   // Buscar por nome com similaridade
   async findByName(nome) {
     const query = `
-      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude
+      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, main_photo_url, image_url
       FROM estabelecimentos
       WHERE nome ILIKE $1
       ORDER BY similarity(nome, $2) DESC, nome
@@ -64,7 +64,7 @@ class EstabelecimentosService {
   // Buscar por tipo
   async findByTipo(tipo) {
     const query = `
-      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude
+      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, main_photo_url, image_url
       FROM estabelecimentos
       WHERE tipo = $1
       ORDER BY nome
@@ -78,7 +78,7 @@ class EstabelecimentosService {
   async findNearby(latitude, longitude, raio = 2000) {
     const query = `
       SELECT 
-        osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude,
+        osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, main_photo_url, image_url,
         ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m
       FROM estabelecimentos
       WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
@@ -93,7 +93,7 @@ class EstabelecimentosService {
   // Buscar últimas alterações
   async getRecentUpdates(limit = 20) {
     const query = `
-      SELECT osm_id, nome, tipo, endereco, updated_at as atualizado_em
+      SELECT osm_id, nome, tipo, endereco, updated_at as atualizado_em, main_photo_url, image_url
       FROM estabelecimentos
       ORDER BY updated_at DESC
       LIMIT $1
@@ -106,7 +106,7 @@ class EstabelecimentosService {
   // Buscar por ID
   async findById(id) {
     const query = `
-      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, 
+      SELECT osm_id, nome, tipo, endereco, telefone, cidade, latitude, longitude, main_photo_url, image_url,
              created_at, updated_at as atualizado_em
       FROM estabelecimentos
       WHERE id = $1 OR osm_id = $1

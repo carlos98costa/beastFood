@@ -237,7 +237,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor BeastFood v2.3 rodando na porta ${PORT}`);
   console.log(`📱 API disponível em:`);
   console.log(`   🌐 Local: http://localhost:${PORT}/api`);
-  console.log(`   📱 Rede: http://192.168.100.2:${PORT}/api`);
+  console.log(`   📱 Rede: http://186.210.58.15:${PORT}/api`);
   console.log(`🔒 Autenticação com refresh tokens habilitada`);
   console.log(`🗺️  Geolocalização com PostGIS habilitada`);
   console.log(`🏪 API de Estabelecimentos implementada`);
