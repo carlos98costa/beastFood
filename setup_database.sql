@@ -1,14 +1,4 @@
--- Script de configuração do banco de dados BeastFood
--- Execute este script no PostgreSQL para criar o banco e as tabelas
 
--- 1. Criar o banco de dados
-CREATE DATABASE beastfood;
-
--- 2. Conectar ao banco beastfood
-\c beastfood;
-
--- 3. Habilitar a extensão PostGIS
-CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 4. Criar tabela de usuários
 CREATE TABLE users (

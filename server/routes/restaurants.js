@@ -314,10 +314,16 @@ router.put('/:id', requireOwnerOrAdmin, async (req, res) => {
     }
 
     // Preparar campos para atualização de forma mais robusta
+    const fieldMapping = {
+      phone: 'phone_number',
+      source_type: 'source',
+      source_id: 'external_id'
+    };
+
     const allowedFields = [
-      'name', 'description', 'address', 'phone', 'website',
+      'name', 'description', 'address', 'website',
       'instagram', 'ifood',
-      'cuisine_type', 'price_range', 'source_type', 'source_id'
+      'cuisine_type', 'price_range'
     ];
 
     const updateFields = [];
@@ -329,6 +335,15 @@ router.put('/:id', requireOwnerOrAdmin, async (req, res) => {
       if (updateData[field] !== undefined && updateData[field] !== null) {
         updateFields.push(`${field} = $${paramCount}`);
         updateValues.push(updateData[field]);
+        paramCount++;
+      }
+    });
+
+    // Mapear campos do frontend para nomes do banco
+    Object.entries(fieldMapping).forEach(([frontendField, dbField]) => {
+      if (updateData[frontendField] !== undefined && updateData[frontendField] !== null) {
+        updateFields.push(`${dbField} = $${paramCount}`);
+        updateValues.push(updateData[frontendField]);
         paramCount++;
       }
     });
