@@ -215,8 +215,33 @@ const Home = () => {
     <div className="home-page">
       {/* Header da página */}
       <div className="page-header">
+        <div className="hero-orb hero-orb-left" aria-hidden="true"></div>
+        <div className="hero-orb hero-orb-right" aria-hidden="true"></div>
+        <span className="hero-eyebrow">Comunidade gastronômica</span>
         <h1>🍽️ BeastFood</h1>
-        <p>Descubra os melhores restaurantes e compartilhe suas experiências gastronômicas!</p>
+        <p>Descubra restaurantes incríveis, acompanhe avaliações reais e compartilhe suas melhores experiências gastronômicas.</p>
+        <div className="hero-actions">
+          <Link to={user ? '/create-post' : '/login'} className="hero-primary-action">
+            Compartilhar avaliação
+          </Link>
+          <Link to="/restaurants" className="hero-secondary-action">
+            Explorar restaurantes
+          </Link>
+        </div>
+        <div className="hero-highlights" aria-label="Resumo da comunidade BeastFood">
+          <div className="hero-highlight-card">
+            <strong>{posts.length}</strong>
+            <span>Avaliações recentes</span>
+          </div>
+          <div className="hero-highlight-card">
+            <strong>{restaurants.length}</strong>
+            <span>Restaurantes em destaque</span>
+          </div>
+          <div className="hero-highlight-card">
+            <strong>4.8</strong>
+            <span>Experiência média</span>
+          </div>
+        </div>
       </div>
 
       <div className="container">
@@ -237,9 +262,23 @@ const Home = () => {
 
         {activeTab === 'posts' && (
           <div className="posts-section">
-            <h2 className="section-title">Últimas Avaliações</h2>
-            <div className="posts-grid">
-              {posts.map(post => (
+            <div className="section-heading">
+              <span className="section-kicker">Feed em tempo real</span>
+              <h2 className="section-title">Últimas Avaliações</h2>
+              <p className="section-subtitle">Veja o que a comunidade está provando agora.</p>
+            </div>
+            {posts.length === 0 ? (
+              <div className="empty-state-card">
+                <span className="empty-state-icon">🍜</span>
+                <h3>Nenhuma avaliação por aqui ainda</h3>
+                <p>Seja a primeira pessoa a compartilhar uma experiência gastronômica no BeastFood.</p>
+                <Link to={user ? '/create-post' : '/login'} className="empty-state-action">
+                  Criar primeira avaliação
+                </Link>
+              </div>
+            ) : (
+              <div className="posts-grid">
+                {posts.map(post => (
                 <div key={post.id} className="post-card card hover-lift">
                   <div className="post-header">
                     <div className="post-user">
@@ -362,16 +401,28 @@ const Home = () => {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'restaurants' && (
           <div className="restaurants-section">
-            <h2 className="section-title">Restaurantes em Destaque</h2>
-            <div className="restaurants-grid grid-3">
-              {restaurants.map(restaurant => (
+            <div className="section-heading">
+              <span className="section-kicker">Curadoria local</span>
+              <h2 className="section-title">Restaurantes em Destaque</h2>
+              <p className="section-subtitle">Opções selecionadas para você descobrir o próximo favorito.</p>
+            </div>
+            {restaurants.length === 0 ? (
+              <div className="empty-state-card">
+                <span className="empty-state-icon">📍</span>
+                <h3>Nenhum restaurante encontrado</h3>
+                <p>Assim que novos lugares entrarem na plataforma, eles aparecem aqui.</p>
+              </div>
+            ) : (
+              <div className="restaurants-grid grid-3">
+                {restaurants.map(restaurant => (
                 <div key={restaurant.id} className="restaurant-card">
                   {/* Header do card com informações principais */}
                   <div className="restaurant-header-main">
@@ -451,8 +502,9 @@ const Home = () => {
                     </Link>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

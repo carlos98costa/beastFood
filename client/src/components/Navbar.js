@@ -393,21 +393,25 @@ const Navbar = () => {
                       aria-expanded={showUserMenu}
                       title={user.name || user.username}
                     >
-                      <div className="user-avatar" aria-hidden="true">
-                        {user.profile_picture ? (
-                          <img 
-                            src={resolveUrl(user.profile_picture)} 
-                            alt=""
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div className="user-avatar-placeholder" style={{ display: user.profile_picture ? 'none' : 'flex' }}>
-                          {user.name?.charAt(0) || user.username?.charAt(0)}
+                      <span className="user-avatar-shell">
+                        <span className="user-avatar-glow" aria-hidden="true"></span>
+                        <div className="user-avatar" aria-hidden="true">
+                          {user.profile_picture ? (
+                            <img 
+                              src={resolveUrl(user.profile_picture)} 
+                              alt=""
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className="user-avatar-placeholder" style={{ display: user.profile_picture ? 'none' : 'flex' }}>
+                            {user.name?.charAt(0) || user.username?.charAt(0)}
+                          </div>
                         </div>
-                      </div>
+                        <span className="user-avatar-status" aria-hidden="true"></span>
+                      </span>
                       <span className="user-menu-text">
                         <span className="username">{user.name || user.username}</span>
                       </span>
@@ -431,6 +435,27 @@ const Navbar = () => {
 
                 {showUserMenu && (
                   <div className="user-dropdown" ref={userDropdownRef}>
+                    <div className="user-dropdown-profile">
+                      <div className="user-avatar dropdown-avatar" aria-hidden="true">
+                        {user.profile_picture ? (
+                          <img
+                            src={resolveUrl(user.profile_picture)}
+                            alt=""
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="user-avatar-placeholder" style={{ display: user.profile_picture ? 'none' : 'flex' }}>
+                          {user.name?.charAt(0) || user.username?.charAt(0)}
+                        </div>
+                      </div>
+                      <div className="user-dropdown-identity">
+                        <strong>{user.name || user.username}</strong>
+                        <span>@{user.username}</span>
+                      </div>
+                    </div>
                     <Link
                       to={`/profile/${user.username}`}
                       className="dropdown-item"
