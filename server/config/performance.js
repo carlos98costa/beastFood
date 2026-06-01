@@ -13,16 +13,29 @@ const buildAllowedOrigins = () => {
 				.filter(Boolean)
 		);
 	}
-	// Origens padrão para desenvolvimento local
+	// Origens padrão para desenvolvimento local e produção atual
 	origins.push(
 		'http://localhost:3000',
 		'http://127.0.0.1:3000',
 		'http://186.210.58.15:3000',
 		'http://186.210.58.15:5000',
-		// IP adicional solicitado para acesso ao backend
-		'http://186.210.58.15:3000'
+		'https://beast-food-nine.vercel.app'
 	);
 	return Array.from(new Set(origins));
+};
+
+const allowedOrigins = buildAllowedOrigins();
+
+const isAllowedOrigin = (origin) => {
+	if (!origin) return true;
+	if (allowedOrigins.includes(origin)) return true;
+
+	try {
+		const { hostname, protocol } = new URL(origin);
+		return protocol === 'https:' && hostname.endsWith('.vercel.app');
+	} catch (error) {
+		return false;
+	}
 };
 
 module.exports = {
@@ -92,8 +105,14 @@ module.exports = {
 
   // Configurações de CORS otimizadas
   cors: {
-    // Aceita múltiplas origens (local + IP da rede)
-    origin: buildAllowedOrigins(),
+    // Aceita múltiplas origens configuradas + deploys HTTPS da Vercel
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [

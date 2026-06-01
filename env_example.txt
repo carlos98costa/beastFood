@@ -7,6 +7,9 @@ NODE_ENV=development
 
 # Configurações do Cliente
 CLIENT_URL=http://localhost:3000
+# Em produção no Render, use o domínio público da Vercel no CLIENT_URL ou CLIENT_URLS para CORS
+# CLIENT_URL=https://beast-food-nine.vercel.app
+# CLIENT_URLS=https://beast-food-nine.vercel.app,https://outro-preview.vercel.app
 # URL pública do backend usada pelo React em produção (Vercel)
 # Em desenvolvimento o frontend continua usando http://localhost:5000 automaticamente
 REACT_APP_API_URL=https://sua-api-em-producao.com

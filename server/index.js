@@ -115,7 +115,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(cookieParser());
 
 // Middleware para lidar com requisições OPTIONS (preflight)
-app.options('*', cors());
+app.options('*', cors(performanceConfig.cors));
 
 // Middleware adicional para CORS preflight
 app.use((req, res, next) => {
