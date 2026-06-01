@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 150" fill="none">
+  <rect width="400" height="150" fill="#E0E0E0"/>
+  <rect x="150" y="55" width="100" height="40" rx="8" fill="#BDBDBD"/>
+  <text x="200" y="80" text-anchor="middle" fill="#9E9E9E" font-size="14" font-family="sans-serif">Cover</text>
+</svg>

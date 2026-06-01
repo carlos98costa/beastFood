@@ -156,6 +156,8 @@ RESOLUCAO_PROBLEMAS.md
 *.png
 *.svg
 !favicon.ico
+!client/src/assets/
+!client/src/assets/*.svg
 
 # Arquivos de teste desnecessários
 test_setup.js
