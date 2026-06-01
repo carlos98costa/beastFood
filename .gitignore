@@ -89,6 +89,8 @@ dist
 # Gatsby files
 .cache/
 public
+!client/public/
+!client/public/index.html
 
 # Storybook build outputs
 .out
