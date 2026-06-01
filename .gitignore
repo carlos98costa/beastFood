@@ -161,3 +161,4 @@ test_*.js
 
 # Pasta de logs vazia
 logs/
+/.agents

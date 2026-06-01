@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import './CreatePostModal.css';
 
@@ -33,6 +34,17 @@ const CreatePostModal = ({
   const [suggestingNew, setSuggestingNew] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -236,12 +248,22 @@ const CreatePostModal = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content create-post-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Nova Avaliação</h2>
-          <button className="close-button" onClick={onClose}>✕</button>
+  return createPortal(
+    <div className="create-post-overlay" onClick={onClose} role="presentation">
+      <div
+        className="create-post-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-post-title"
+      >
+        <div className="create-post-header">
+          <div>
+            <span className="create-post-eyebrow">BeastFood</span>
+            <h2 id="create-post-title">Nova Avaliação</h2>
+            <p>Compartilhe uma experiência gastronômica com fotos, nota e detalhes do restaurante.</p>
+          </div>
+          <button type="button" className="create-post-close" onClick={onClose} aria-label="Fechar modal">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="create-post-form">
@@ -553,7 +575,8 @@ const CreatePostModal = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -81,6 +81,7 @@ CREATE TABLE comments (
     post_id INT REFERENCES posts(id) ON DELETE CASCADE,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
+    parent_comment_id INT REFERENCES comments(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -130,6 +131,8 @@ CREATE INDEX idx_posts_pending_restaurant_id ON posts(pending_restaurant_id);
 CREATE INDEX idx_posts_created_at ON posts(created_at);
 CREATE INDEX idx_posts_is_suggestion ON posts(is_suggestion);
 CREATE INDEX idx_comments_post_id ON comments(post_id);
+CREATE INDEX idx_comments_parent_comment_id ON comments(parent_comment_id);
+CREATE INDEX idx_comments_post_parent ON comments(post_id, parent_comment_id);
 CREATE INDEX idx_likes_post_id ON likes(post_id);
 CREATE INDEX idx_favorites_user_id ON favorites(user_id);
 CREATE INDEX idx_follows_follower_id ON follows(follower_id);

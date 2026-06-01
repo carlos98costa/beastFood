@@ -44,6 +44,12 @@ async function createTables() {
     console.log('restaurant_status criada');
 
     await pool.query(`
+      ALTER TABLE comments
+      ADD COLUMN IF NOT EXISTS parent_comment_id INT REFERENCES comments(id) ON DELETE CASCADE
+    `);
+    console.log('comments.parent_comment_id garantida');
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS comment_likes (
         id SERIAL PRIMARY KEY,
         comment_id INT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,

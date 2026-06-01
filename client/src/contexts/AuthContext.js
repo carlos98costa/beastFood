@@ -229,7 +229,8 @@ export function AuthProvider({ children }) {
       setLoading(false);
       console.log('🏁 verifyToken: finally executado, loading false');
     }
-  }, [token, isVerifying, isRefreshing, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const login = useCallback(async (username, password) => {
     try {
@@ -371,7 +372,8 @@ export function AuthProvider({ children }) {
         clearInterval(tokenCheckInterval.current);
       }
     };
-  }, [token, user]); // REMOVIDO verifyToken das dependências
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   // Conexão SSE para notificações
   useEffect(() => {

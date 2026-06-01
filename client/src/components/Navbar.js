@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaUtensils, FaSearch, FaPlus, FaUser, FaSignOutAlt, FaMapMarkerAlt, FaCrown } from 'react-icons/fa';
+import { FaUtensils, FaSearch, FaPlus, FaUser, FaSignOutAlt, FaMapMarkerAlt, FaCrown, FaChevronDown } from 'react-icons/fa';
 import { MdNotifications } from 'react-icons/md';
 import axios from 'axios';
 import CreatePostModal from './CreatePostModal';
 import AdminPanel from './AdminPanel';
 import './Navbar.css';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const Navbar = () => {
   const { user, logout, notificationsUnread, setNotificationsUnreadCount } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -21,7 +24,30 @@ const Navbar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const navbarRef = useRef(null);
   const notificationsRef = useRef(null);
+  const notificationsDropdownRef = useRef(null);
+  const userDropdownRef = useRef(null);
+  const searchSuggestionsRef = useRef(null);
+
+  useEffect(() => {
+    const navbar = navbarRef.current;
+    if (!navbar) return;
+
+    const ctx = gsap.context(() => {
+      gsap.to(navbar, {
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+        scrollTrigger: {
+          start: 20,
+          end: 9999,
+          onEnter: () => navbar.classList.add('scrolled'),
+          onLeaveBack: () => navbar.classList.remove('scrolled')
+        }
+      });
+    }, navbar);
+
+    return () => ctx.revert();
+  }, []);
 
   const resolveUrl = (url) => {
     if (!url || typeof url !== 'string') return '';
@@ -76,6 +102,9 @@ const Navbar = () => {
     if (!e.target.closest('.notifications-container')) {
       setShowNotifications(false);
     }
+    if (!e.target.closest('.user-menu')) {
+      setShowUserMenu(false);
+    }
   };
 
   useEffect(() => {
@@ -84,6 +113,26 @@ const Navbar = () => {
       document.removeEventListener('click', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (showUserMenu && userDropdownRef.current) {
+      const tween = gsap.fromTo(userDropdownRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' }
+      );
+      return () => tween.kill();
+    }
+  }, [showUserMenu]);
+
+  useEffect(() => {
+    if (showSuggestions && searchSuggestionsRef.current) {
+      const tween = gsap.fromTo(searchSuggestionsRef.current,
+        { opacity: 0, y: -10, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'power2.out' }
+      );
+      return () => tween.kill();
+    }
+  }, [showSuggestions]);
 
   const handleLogout = () => {
     logout();
@@ -116,6 +165,16 @@ const Navbar = () => {
       await fetchNotifications();
     }
   };
+
+  useEffect(() => {
+    if (showNotifications && notificationsDropdownRef.current) {
+      const tween = gsap.fromTo(notificationsDropdownRef.current,
+        { opacity: 0, y: -10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: 'power2.out' }
+      );
+      return () => tween.kill();
+    }
+  }, [showNotifications]);
 
   const handleNotificationClick = async (n) => {
     try {
@@ -208,7 +267,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar">
+    <nav className="navbar" ref={navbarRef}>
       <div className="navbar-container">
         <Link to="/" className="navbar-brand">
           <FaUtensils className="brand-icon" />
@@ -234,9 +293,8 @@ const Navbar = () => {
               <FaSearch />
             </button>
           </div>
-          
           {showSuggestions && searchQuery.trim().length >= 2 && (
-            <div className="search-suggestions">
+            <div className="search-suggestions" ref={searchSuggestionsRef}>
               <div className="suggestion-item" onClick={() => handleSuggestionClick(searchQuery, 'restaurants')}>
                 <FaUtensils /> Buscar restaurantes com "{searchQuery}"
               </div>
@@ -272,7 +330,7 @@ const Navbar = () => {
                   </div>
                 </button>
                 {showNotifications && (
-                  <div className="notifications-dropdown">
+                  <div className="notifications-dropdown" ref={notificationsDropdownRef}>
                     <div className="notifications-header">
                       <span>Notificações</span>
                       {notifications.length > 0 && (
@@ -328,15 +386,18 @@ const Navbar = () => {
               <div className="user-menu">
                 {user ? (
                   <>
-                    <button 
-                      className="user-menu-trigger"
+                    <button
+                      className={`user-menu-trigger ${showUserMenu ? 'active' : ''}`}
                       onClick={() => setShowUserMenu(!showUserMenu)}
+                      aria-haspopup="menu"
+                      aria-expanded={showUserMenu}
+                      title={user.name || user.username}
                     >
-                      <div className="user-avatar">
+                      <div className="user-avatar" aria-hidden="true">
                         {user.profile_picture ? (
                           <img 
                             src={resolveUrl(user.profile_picture)} 
-                            alt={user.name || user.username}
+                            alt=""
                             onError={(e) => {
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'flex';
@@ -347,8 +408,12 @@ const Navbar = () => {
                           {user.name?.charAt(0) || user.username?.charAt(0)}
                         </div>
                       </div>
-                      <span className="username">{user.name || user.username}</span>
-                      <FaUser className="user-icon" />
+                      <span className="user-menu-text">
+                        <span className="username">{user.name || user.username}</span>
+                      </span>
+                      <span className="user-menu-chevron-wrap">
+                        <FaChevronDown className="user-menu-chevron" />
+                      </span>
                     </button>
                   </>
                 ) : (
@@ -365,8 +430,8 @@ const Navbar = () => {
                 )}
 
                 {showUserMenu && (
-                  <div className="user-dropdown">
-                    <Link 
+                  <div className="user-dropdown" ref={userDropdownRef}>
+                    <Link
                       to={`/profile/${user.username}`}
                       className="dropdown-item"
                       onClick={() => setShowUserMenu(false)}
@@ -374,7 +439,7 @@ const Navbar = () => {
                       <FaUser />
                       <span>Meu Perfil</span>
                     </Link>
-                    <button 
+                    <button
                       onClick={handleLogout}
                       className="dropdown-item logout-item"
                     >

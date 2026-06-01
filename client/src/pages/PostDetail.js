@@ -15,7 +15,7 @@ function PostDetail() {
   const [commentCount, setCommentCount] = useState(0);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
   const { id } = useParams();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
@@ -103,11 +103,6 @@ function PostDetail() {
       if (next < 0 || next >= post.photos.length) return prev;
       return next;
     });
-  };
-
-  // Navegar para o restaurante
-  const handleRestaurantClick = () => {
-    navigate(`/restaurant/${post.restaurant_id}`);
   };
 
   // Navegar para o perfil do usuário (usar username, não o id)

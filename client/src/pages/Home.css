@@ -1,471 +1,406 @@
-.home-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
+/* ========================================
+   BEASTFOOD HOME PAGE - Premium Feed Design
+   Glass Morphism with micro-interactions
+   ======================================== */
 
-/* Controla a proporção (largura/altura) das fotos do feed */
 .home-page {
-  /* Variáveis de controle visual */
-  --post-aspect: 1 / 1;
-  --post-card-max: 580px; /* controle de largura do card */
-  --post-image-height: auto; /* altura fixa opcional; auto usa a proporção */
-  --post-card-padding: 20px; /* controle de padding do card */
-  --post-card-max-height: none; /* defina ex.: 620px para limitar a altura do card */
-
-  /* Limitar largura e centralizar a página para dar sensação de app desktop */
-  max-width: 1200px;
+  max-width: var(--max-width-content);
   margin: 0 auto;
-  padding: 0 24px;
+  padding: var(--navbar-height) var(--space-6) var(--space-16);
 }
 
-.hero-section {
+/* Page Header - Premium Hero */
+.page-header {
   text-align: center;
-  padding: 60px 20px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-  color: white;
-  border-radius: 15px;
-  margin-bottom: 40px;
+  margin-bottom: var(--space-20);
+  padding: var(--space-16) 0;
 }
 
-.hero-section h1 {
-  font-size: 3rem;
-  margin-bottom: 20px;
-  font-weight: 700;
+.page-header h1 {
+  font-size: var(--font-size-4xl);
+  color: var(--gray-900);
+  margin-bottom: var(--space-4);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.025em;
+  line-height: var(--line-height-tight);
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.hero-section p {
-  font-size: 1.2rem;
-  margin-bottom: 30px;
-  opacity: 0.9;
+.page-header p {
+  font-size: var(--font-size-lg);
+  color: var(--gray-600);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: var(--line-height-relaxed);
 }
 
-.cta-button {
-  background: #ff6b6b;
-  color: white;
-  padding: 15px 30px;
+/* Content Tabs - Premium Segmented Control */
+.content-tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-12);
+  border-bottom: 1px solid var(--gray-300);
+  padding-bottom: var(--space-4);
+}
+
+.tab-button {
+  flex: 1;
+  padding: var(--space-4) var(--space-6);
   border: none;
-  border-radius: 25px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  background: transparent;
+  color: var(--gray-600);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-base);
   cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  display: inline-block;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  position: relative;
+  letter-spacing: -0.01em;
 }
 
-.cta-button:hover {
-  background: #ff5252;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+.tab-button::before {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  transition: width var(--transition-fast);
+  border-radius: var(--radius-sm);
 }
 
-.features-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  margin-bottom: 40px;
+.tab-button:hover {
+  color: var(--primary-600);
+  background: var(--gray-50);
 }
 
-.feature-card {
-  background: white;
-  padding: 30px;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+.tab-button:hover::before {
+  width: 40%;
+}
+
+.tab-button.active {
+  color: var(--primary-600);
+  font-weight: var(--font-weight-semibold);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+}
+
+.tab-button.active::before {
+  width: 80%;
+}
+
+/* Section Titles */
+.section-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-800);
+  margin-bottom: var(--space-8);
   text-align: center;
-  transition: transform 0.3s ease;
+  letter-spacing: -0.01em;
 }
 
-.feature-card:hover {
-  transform: translateY(-5px);
-}
-
-.feature-icon {
-  font-size: 3rem;
-  margin-bottom: 20px;
-  color: var(--primary-color);
-}
-
-.feature-card h3 {
-  font-size: 1.5rem;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.feature-card p {
-  color: #666;
-  line-height: 1.6;
-}
-
-.recent-posts {
-  background: white;
-  padding: 30px;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-}
-
-.recent-posts h2 {
-  font-size: 2rem;
-  margin-bottom: 20px;
-  color: #333;
-  text-align: center;
-}
-
+/* Posts Grid - Centered Cards */
 .posts-grid {
   display: grid;
+  gap: var(--space-8);
   grid-template-columns: 1fr;
-  gap: 20px;
   justify-items: center;
+  max-width: 580px;
+  margin: 0 auto;
 }
 
-/* Responsividade: afinar um pouco em telas muito estreitas */
-@media (max-width: 520px) {
-  .home-page {
-    --post-card-max: 92vw;
-  }
+/* Section Wrappers */
+.posts-section,
+.restaurants-section {
+  margin-bottom: var(--space-16);
 }
 
-.home-page .post-card {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: var(--post-card-padding, 20px);
-  transition: transform 0.3s ease;
+/* ========================================
+   POST CARDS - Glass Morphism Premium
+   ======================================== */
+
+.post-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: all var(--transition-slow);
   width: 100%;
-  max-width: var(--post-card-max, 480px);
-  max-height: var(--post-card-max-height, none);
+  max-width: 580px;
   box-sizing: border-box;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
 }
 
-.home-page .post-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+.post-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-500), var(--secondary-500));
+  opacity: 0;
+  transition: opacity var(--transition-fast);
 }
 
+.post-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-2xl);
+  border-color: rgba(255, 107, 53, 0.3);
+}
+
+.post-card:hover::before {
+  opacity: 1;
+}
+
+/* Post Header */
 .post-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 15px;
+  margin-bottom: var(--space-5);
 }
 
-.post-header-actions {
+.post-user {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.post-actions-menu {
-  display: flex;
-  gap: 8px;
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  object-position: center;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  border: 2px solid var(--primary-200);
+  transition: border-color var(--transition-fast);
 }
 
-.edit-button,
-.delete-button {
-  background: none;
-  border: none;
-  padding: 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.875rem;
+.post-card:hover .user-avatar {
+  border-color: var(--primary-400);
 }
 
-.edit-button {
-  color: var(--primary-color);
-}
-
-.edit-button:hover {
-  background-color: rgba(255, 107, 53, 0.1);
-}
-
-.delete-button {
-  color: #ef4444;
-}
-
-.delete-button:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-}
-
-.post-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-right: 10px;
-  background: var(--primary-color);
+.user-avatar-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-weight: bold;
-  object-fit: cover;
-  object-position: center;
-  min-width: 40px;
-  min-height: 40px;
+  font-weight: var(--font-weight-bold);
+  font-size: 1.25rem;
+  min-width: 44px;
+  min-height: 44px;
   flex-shrink: 0;
+  border: 2px solid var(--primary-200);
 }
 
-.post-info h4 {
-  margin: 0;
-  color: #333;
-  font-size: 1rem;
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.post-info small {
-  color: #666;
-  font-size: 0.9rem;
+.user-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray-900);
+  font-size: var(--font-size-sm);
 }
 
-.post-content {
-  margin-bottom: 8px;
+.post-date {
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
 }
 
-.post-content h5 {
-  margin: 0 0 10px 0;
-  color: #333;
-  font-size: 1.1rem;
+.post-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-.post-content p {
-  color: #666;
-  line-height: 1.5;
-  margin: 0;
+.restaurant-link a {
+  color: var(--primary-600);
+  text-decoration: none;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2) var(--space-4);
+  background: var(--primary-50);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
 }
 
-.post-rating {
-  color: #ffc107;
-  font-size: 1.1rem;
-  margin-bottom: 6px;
+.restaurant-link a:hover {
+  background: var(--primary-100);
+  color: var(--primary-700);
 }
 
-.post-images {
-  margin-bottom: 15px;
-  position: relative;
-  width: 100%;
-  /* Se --post-image-height for auto, usamos aspect-ratio; se receber um valor (ex.: 380px), usa altura fixa */
-  aspect-ratio: var(--post-aspect, 1 / 1);
-  height: var(--post-image-height);
-  overflow: hidden;
-  border-radius: 8px;
-  background-color: #f3f4f6;
+/* Post Actions Menu (Edit/Delete) */
+.post-actions-menu {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.action-button.edit-button,
+.action-button.delete-button {
+  background: transparent;
+  border: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.action-button.edit-button {
+  color: var(--primary-600);
+}
+
+.action-button.edit-button:hover {
+  background-color: var(--primary-100);
+  transform: scale(1.1);
+}
+
+.action-button.delete-button {
+  color: var(--danger-500);
+}
+
+.action-button.delete-button:hover {
+  background-color: #fee2e2;
+  transform: scale(1.1);
+}
+
+/* Post Images - Gallery */
+.post-images {
+  margin-bottom: var(--space-5);
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gray-200);
 }
 
 .post-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 8px;
+  object-position: center;
+  border-radius: var(--radius-lg);
   display: block;
+  transition: transform var(--transition-slow);
+}
+
+.post-card:hover .post-image {
+  transform: scale(1.02);
 }
 
 .post-photos-gallery {
   position: relative;
   width: 100%;
-  aspect-ratio: var(--post-aspect, 1 / 1);
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* Photo Navigation */
 .photo-navigation {
   position: absolute;
-  bottom: 10px;
+  bottom: var(--space-3);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: var(--space-4);
   background: rgba(0, 0, 0, 0.7);
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
   color: white;
+  backdrop-filter: blur(10px);
 }
 
 .nav-arrow {
-  background: none;
+  background: transparent;
   border: none;
   color: white;
   font-size: 20px;
   cursor: pointer;
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.3s ease;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
 }
 
 .nav-arrow:hover {
   background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.15);
 }
 
 .photo-counter {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   min-width: 40px;
   text-align: center;
 }
 
-.post-actions {
-  display: flex;
-  gap: 12px;
-  font-size: 0.9rem;
-  color: #666;
-  padding-top: 8px;
-  border-top: 1px solid #eee;
+/* Post Content */
+.post-content {
+  margin-bottom: var(--space-4);
 }
 
-.post-action {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: color 0.3s ease;
+.post-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray-900);
+  margin-bottom: var(--space-2);
+  letter-spacing: -0.01em;
 }
 
-.post-action:hover {
-  color: var(--primary-color);
+.post-text {
+  color: var(--gray-700);
+  line-height: var(--line-height-relaxed);
+  margin-bottom: var(--space-3);
 }
 
-/* Estilos para avatar e elementos de usuário */
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: center;
-  min-width: 40px;
-  min-height: 40px;
-  flex-shrink: 0;
-}
-
-.user-avatar-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+/* Post Rating - Stars */
+.post-rating {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 1.2rem;
-  min-width: 40px;
-  min-height: 40px;
-  flex-shrink: 0;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
-.post-user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-weight: 600;
-  color: #1c1e21;
-  font-size: 14px;
-}
-
-.post-date {
-  font-size: 12px;
-  color: #65676b;
-}
-
-.post-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-.post-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.restaurant-link a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.restaurant-link a:hover {
-  text-decoration: underline;
-}
-
-.post-actions-menu {
-  display: flex;
-  gap: 8px;
-}
-
-.edit-button {
-  color: var(--primary-color);
-}
-
-.delete-button {
-  color: #ff6b6b;
-}
-
-/* Estilos para botões de ação */
-.action-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: 20px;
-  transition: all 0.3s ease;
-  text-decoration: none;
-}
-
-.action-button:hover {
-  background: #f0f2f5;
-  color: var(--primary-color);
-  transform: translateY(-1px);
-}
-
-.action-button.liked {
-  color: #ff6b6b;
-}
-
-.action-button.liked:hover {
-  background: #ffe8e8;
-}
-
-/* Estilos específicos para botão de comentários */
-.action-button .fa-comment {
-  font-size: 16px;
-  transition: all 0.3s ease;
-}
-
-.action-button:hover .fa-comment {
-  color: var(--primary-color);
-  transform: scale(1.1);
-}
-
-/* Estilos para estrelas */
 .star {
-  color: #ddd;
-  cursor: pointer;
+  color: var(--gray-400);
   font-size: 18px;
-  transition: color 0.2s ease;
+  transition: color var(--transition-fast);
 }
 
 .star.filled {
@@ -473,510 +408,254 @@
 }
 
 .rating-text {
-  margin-left: 8px;
-  font-weight: 500;
-  color: #666;
+  margin-left: var(--space-2);
+  font-weight: var(--font-weight-medium);
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
 }
 
-/* Estilos para coração com animação */
+/* Post Actions - Like/Comment Buttons */
+.post-actions {
+  display: flex;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--gray-200);
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.action-button:hover {
+  background: var(--gray-100);
+  color: var(--primary-600);
+  transform: translateY(-1px);
+}
+
+.action-button.liked {
+  color: var(--danger-500);
+  background: #fef2f2;
+}
+
+.action-button.liked:hover {
+  background: #fee2e2;
+}
+
 .action-button .fa-heart,
 .action-button .fa-reg-heart {
-  transition: all 0.3s ease;
+  transition: all var(--transition-fast);
   font-size: 18px;
 }
 
-.action-button .fa-heart.liked {
-  color: #ff6b6b;
-  transform: scale(1.2);
-  animation: heartBeat 0.6s ease-in-out;
-}
-
-.action-button .fa-reg-heart {
-  color: #666;
-  transition: all 0.3s ease;
-}
-
 .action-button:hover .fa-reg-heart {
-  color: #ff6b6b;
-  transform: scale(1.1);
+  color: var(--danger-500);
+  transform: scale(1.15);
 }
 
-.action-button:hover .fa-heart.liked {
-  transform: scale(1.3);
-}
+/* ========================================
+   RESTAURANT CARDS - Premium Display
+   ======================================== */
 
-/* Animação de batida do coração */
-@keyframes heartBeat {
-  0% {
-    transform: scale(1);
-  }
-  25% {
-    transform: scale(1.3);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-  75% {
-    transform: scale(1.3);
-  }
-  100% {
-    transform: scale(1.2);
-  }
-}
-
-/* Efeito de pulso para coração curtido */
-.action-button .fa-heart.liked {
-  animation: heartBeat 0.6s ease-in-out, pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
-  }
-}
-
-/* Estilos para loading */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  gap: 16px;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid var(--primary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Estilos para botões */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-primary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #e55a2b;
-  transform: translateY(-2px);
-}
-
-.btn-large {
-  padding: 16px 32px;
-  font-size: 16px;
-}
-
-.btn-full {
-  width: 100%;
-  justify-content: center;
-}
-
-/* Estilos para cards */
-.card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-/* Estilos para tabs */
-.content-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.tab-button {
-  padding: 12px 24px;
-  border: none;
-  background: none;
-  color: #6b7280;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.3s ease;
-}
-
-.tab-button.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-}
-
-.tab-button:hover {
-  color: #374151;
-}
-
-/* Estilos para seções */
-.section-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.posts-section,
-.restaurants-section {
-  margin-bottom: 40px;
-}
-
-.posts-grid {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: 1fr;
-  justify-items: center;
-}
-
-.home-page .post-card {
-  padding: 20px;
-  width: 100%;
-  max-width: var(--post-card-max, 480px);
-}
-
-/* Normalização de estilos quando reutilizamos o card do Home em outras páginas */
-.home-page .post-header {
-  border-bottom: none;
-  padding: 0;
-}
-
-.home-page .post-content {
-  padding: 0;
-}
-
-.home-page .post-card.card {
-  margin-left: auto;
-  margin-right: auto;
-  /* Forçar o mesmo visual do card mesmo quando combinado com outras classes */
-  background: #f8f9fa;
-  border-radius: 10px;
-}
-
-.post-content {
-  margin-bottom: 16px;
-}
-
-.post-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 8px;
-}
-
-.post-text {
-  color: #4b5563;
-  line-height: 1.6;
-  margin-bottom: 12px;
-}
-
-.post-rating {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.post-images {
-  margin-bottom: 16px;
-  width: 100%;
-  aspect-ratio: var(--post-aspect, 1 / 1);
-  overflow: hidden;
-  border-radius: 8px;
-  background-color: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.post-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  border-radius: 8px;
-}
-
-.post-photos-gallery {
-  position: relative;
-  width: 100%;
-  aspect-ratio: var(--post-aspect, 1 / 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.photo-navigation {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 8px 16px;
-  border-radius: 20px;
-  color: white;
-}
-
-.nav-arrow {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.3s ease;
-}
-
-.nav-arrow:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.photo-counter {
-  font-size: 14px;
-  font-weight: 500;
-  min-width: 40px;
-  text-align: center;
-}
-
-/* Estilos para restaurantes */
 .restaurants-grid {
   display: grid;
-  gap: 20px;
+  gap: var(--space-8);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
-.grid-3 {
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-}
-
-/* Cards de restaurantes - mesmo design da página Restaurants */
 .restaurant-card {
-  background: white;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  transition: all var(--transition-slow);
   width: 100%;
   max-width: 380px;
-  height: auto;
-  min-height: 400px;
+  min-height: 420px;
   display: flex;
   flex-direction: column;
   cursor: pointer;
   position: relative;
-  padding: 1.5rem;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .restaurant-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  border-color: rgba(255, 107, 53, 0.2);
+  transform: translateY(-12px) translateZ(0);
+  box-shadow: var(--shadow-2xl);
+  border-color: rgba(255, 107, 53, 0.3);
 }
 
-.restaurant-card:active {
-  transform: translateY(-4px);
-  transition: transform 0.1s ease;
+.restaurant-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  opacity: 0;
+  transition: opacity var(--transition-fast);
 }
 
-/* Header principal do card */
+.restaurant-card:hover::before {
+  opacity: 1;
+}
+
+/* Restaurant Header */
 .restaurant-header-main {
   text-align: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f3f4f6;
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-200);
 }
 
-/* Nome do restaurante em destaque */
 .restaurant-name-main {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #1f2937;
-  margin-bottom: 0.75rem;
-  line-height: 1.2;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--gray-900);
+  margin-bottom: var(--space-3);
+  line-height: var(--line-height-tight);
   letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
-/* Tipo de cozinha */
 .restaurant-cuisine-main {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   color: white;
-  padding: 0.5rem 1.5rem;
-  border-radius: 25px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
   letter-spacing: 0.8px;
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
   display: inline-block;
 }
 
-/* Estatísticas do restaurante */
+/* Restaurant Stats - Grid 3 Column */
 .restaurant-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
 }
 
-/* Item de estatística */
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 0.75rem;
+  padding: var(--space-3);
   background: white;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition-fast);
 }
 
 .stat-item:hover {
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-/* Ícone da estatística */
 .stat-icon {
   font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
 }
 
-/* Conteúdo da estatística */
-.stat-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-/* Valor da estatística */
 .stat-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--gray-900);
 }
 
-/* Label da estatística */
 .stat-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: var(--space-1);
 }
 
-/* Localização */
+/* Restaurant Location */
 .restaurant-location-main {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #fefefe;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  margin-bottom: 1rem;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  margin-bottom: var(--space-4);
 }
 
 .location-icon {
-  color: #ef4444;
+  color: var(--danger-500);
   font-size: 1.1rem;
   flex-shrink: 0;
 }
 
 .location-text {
-  color: #4b5563;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  font-weight: 500;
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-medium);
 }
 
-/* Descrição */
+/* Restaurant Description */
 .restaurant-description-main {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
   flex: 1;
 }
 
 .restaurant-description-main p {
-  color: #6b7280;
-  font-size: 0.9rem;
-  line-height: 1.6;
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
   text-align: center;
   font-style: italic;
-  padding: 1rem;
-  background: #fafafa;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  padding: var(--space-4);
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
   margin: 0;
 }
 
-/* Footer do card */
+/* Restaurant Footer - CTA Button */
 .restaurant-footer {
   margin-top: auto;
-  padding-top: 1rem;
-  border-top: 2px solid #f3f4f6;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-200);
 }
 
-/* Botão de ação */
 .view-restaurant-btn {
   display: block;
   width: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: var(--space-4);
+  background: linear-gradient(135deg, var(--success-500), var(--success-600));
   color: white;
   text-align: center;
   text-decoration: none;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
+  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
@@ -987,44 +666,98 @@
 .view-restaurant-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
 }
 
 .view-restaurant-btn:active {
   transform: translateY(0);
-  transition: transform 0.1s ease;
 }
 
-/* Header da página */
-.page-header {
-  text-align: center;
-  margin-bottom: 3rem;
-  padding: 2rem 0;
+/* ========================================
+   LOADING STATE
+   ======================================== */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: var(--space-4);
 }
 
-.page-header h1 {
-  font-size: 3rem;
-  color: var(--text-dark);
-  margin-bottom: 1rem;
-  font-weight: 700;
+.loading-spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid var(--gray-200);
+  border-top: 4px solid var(--primary-500);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
 }
 
-.page-header p {
-  font-size: 1.2rem;
-  color: var(--text-light);
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: 1.6;
+.loading-container p {
+  color: var(--gray-600);
+  font-weight: var(--font-weight-medium);
 }
 
-/* Responsividade para o header */
+/* ========================================
+   STAGGERED ANIMATIONS
+   ======================================== */
+.post-card {
+  animation: fadeInUp 0.6s var(--transition-base) both;
+}
+
+.post-card:nth-child(1) { animation-delay: 0ms; }
+.post-card:nth-child(2) { animation-delay: 100ms; }
+.post-card:nth-child(3) { animation-delay: 200ms; }
+.post-card:nth-child(4) { animation-delay: 300ms; }
+.post-card:nth-child(5) { animation-delay: 400ms; }
+
+.restaurant-card {
+  animation: fadeInUp 0.6s var(--transition-base) both;
+}
+
+.restaurant-card:nth-child(1) { animation-delay: 0ms; }
+.restaurant-card:nth-child(2) { animation-delay: 100ms; }
+.restaurant-card:nth-child(3) { animation-delay: 200ms; }
+
+/* ========================================
+   RESPONSIVENESS
+   ======================================== */
+
+@media (max-width: 1024px) {
+  .home-page {
+    padding: var(--navbar-height) var(--space-4) var(--space-12);
+  }
+}
+
 @media (max-width: 768px) {
   .page-header h1 {
-    font-size: 2.5rem;
+    font-size: var(--font-size-3xl);
   }
-  
+
   .page-header p {
-    font-size: 1.1rem;
-    padding: 0 1rem;
+    font-size: var(--font-size-base);
+  }
+
+  .posts-grid {
+    max-width: 100%;
+  }
+
+  .post-card,
+  .restaurant-card {
+    padding: var(--space-5);
+  }
+}
+
+@media (max-width: 480px) {
+  .home-page {
+    padding: var(--navbar-height) var(--space-3) var(--space-10);
+  }
+
+  .page-header h1 {
+    font-size: var(--font-size-2xl);
+  }
+
+  .restaurants-grid {
+    grid-template-columns: 1fr;
   }
 }

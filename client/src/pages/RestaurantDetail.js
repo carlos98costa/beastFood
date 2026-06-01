@@ -32,10 +32,6 @@ const RestaurantDetail = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [newPost, setNewPost] = useState({
-    content: '',
-    rating: 5
-  });
   const [editingPost, setEditingPost] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState({});
@@ -216,29 +212,6 @@ const RestaurantDetail = () => {
       console.error('Erro ao alternar favorito:', error);
     }
   }, [user, isFavorite, id]);
-
-  const handleCreatePost = useCallback(async (e) => {
-    e.preventDefault();
-    if (!newPost.content.trim()) return;
-
-    try {
-      const response = await axios.post('/api/posts', {
-        content: newPost.content,
-        rating: newPost.rating,
-        restaurant_id: id
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-
-      if (response.data.success) {
-        setPosts(prev => [response.data.post, ...prev]);
-        setNewPost({ content: '', rating: 5 });
-        setShowCreatePost(false);
-      }
-    } catch (error) {
-      console.error('Erro ao criar post:', error);
-    }
-  }, [newPost, id]);
 
   const handleEditPost = useCallback((post) => {
     setEditingPost(post);

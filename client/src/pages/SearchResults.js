@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { FaUtensils, FaUser, FaStar, FaHeart, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import { FaUtensils, FaUser, FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
 import axios from 'axios';
 import './SearchResults.css';
 import './Restaurants.css';
@@ -71,27 +71,6 @@ function SearchResults() {
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo(0, 0);
-  };
-
-  const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<FaStar key={i} className="star filled star" />);
-    }
-
-    if (hasHalfStar) {
-      stars.push(<FaStar key="half" className="star half star" />);
-    }
-
-    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<FaStar key={`empty-${i}`} className="star empty star" />);
-    }
-
-    return stars;
   };
 
   const renderPriceRange = (price) => {

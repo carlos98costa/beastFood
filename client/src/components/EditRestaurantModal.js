@@ -63,48 +63,6 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
 
   // handleInputChange removido pois não estava sendo utilizado
 
-  const handleImageUpload = async (type, file) => {
-    try {
-      setLoading(true);
-      
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('type', type);
-      formData.append('restaurantId', restaurant.id);
-
-      const response = await restaurantAxios.post('/api/restaurants/upload-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.data.success) {
-        // setImages(prev => ({ // This line was removed as per the edit hint
-        //   ...prev,
-        //   [type]: file
-        // }));
-        
-        // setImagePreview removido pois não estava sendo utilizado
-
-        // Atualizar o restaurante com a nova URL da imagem
-        if (type === 'main_photo') {
-          restaurant.main_photo_url = response.data.imageUrl;
-        } else if (type === 'logo') {
-          restaurant.logo_url = response.data.imageUrl;
-        }
-      }
-    } catch (error) {
-      console.error(`Erro ao fazer upload da ${type}:`, error);
-      setErrors(prev => ({
-        ...prev,
-        [type]: 'Erro ao fazer upload da imagem'
-      }));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const validateForm = () => {
     const newErrors = {};
     

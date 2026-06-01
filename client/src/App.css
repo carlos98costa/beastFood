@@ -1,120 +1,259 @@
-/* App.css - Sistema de Restaurantes */
+/* ========================================
+   APP LAYOUT - Premium structure
+   ======================================== */
 
 .App {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* Layout principal */
+/* Subtle pattern overlay */
+.App::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(var(--primary-500) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
 .main-content {
   flex: 1;
-  padding-top: 80px; /* Espaço para a navbar fixa */
+  padding-top: var(--navbar-height);
+  min-height: calc(100vh - var(--navbar-height));
+  position: relative;
+  z-index: 1;
 }
 
-/* Reset e estilos base */
-* {
-  margin: 0;
+/* ========================================
+   BUTTONS - Premium variants
+   ======================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--success-500), var(--success-600));
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--primary-500);
+  color: var(--primary-600);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--primary-50);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--gray-700);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--gray-100);
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
   padding: 0;
-  box-sizing: border-box;
+  border-radius: var(--radius-full);
 }
 
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
-  color: #1f2937;
-  background: #f8fafc;
+/* Button Sizes */
+.btn-sm {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
 }
 
-/* Scrollbar personalizada */
-::-webkit-scrollbar {
-  width: 8px;
+.btn-lg {
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-size-lg);
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
+/* ========================================
+   CARDS - Glass morphism design
+   ======================================== */
+
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-xl);
+  transition: all var(--transition-slow);
+  position: relative;
+  overflow: hidden;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-2xl);
+  border-color: rgba(255, 107, 53, 0.3);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.card-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--gray-200);
 }
 
-/* Animações globais */
-@keyframes fadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(20px); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
+.card-body {
+  padding: var(--space-6);
 }
 
-@keyframes slideIn {
-  from { 
-    transform: translateX(-100%); 
-  }
-  to { 
-    transform: translateX(0); 
-  }
+.card-footer {
+  padding: var(--space-6);
+  border-top: 1px solid var(--gray-200);
 }
 
-@keyframes scaleIn {
-  from { 
-    transform: scale(0.9); 
-    opacity: 0; 
-  }
-  to { 
-    transform: scale(1); 
-    opacity: 1; 
-  }
+/* ========================================
+   FORM ELEMENTS
+   ======================================== */
+
+.form-group {
+  margin-bottom: var(--space-6);
 }
 
-/* Classes de animação */
-.fade-in {
-  animation: fadeIn 0.5s ease-in;
+.form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--gray-800);
+  font-size: var(--font-size-sm);
 }
 
-.slide-in {
-  animation: slideIn 0.3s ease-out;
+.form-input {
+  width: 100%;
+  padding: var(--space-4) var(--space-5);
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+  background: white;
 }
 
-.scale-in {
-  animation: scaleIn 0.3s ease-out;
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
 }
 
-/* Utilitários de layout */
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 1rem;
+.form-input::placeholder {
+  color: var(--gray-400);
 }
 
-.text-center {
-  text-align: center;
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: var(--space-4);
 }
 
-.text-left {
-  text-align: left;
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-.text-right {
-  text-align: right;
+.loading-spinner.small {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
 }
 
-/* Responsividade */
+/* Spinner Icon */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* ========================================
+   UTILITIES
+   ======================================== */
+
+.w-100 { width: 100%; }
+.h-100 { height: 100%; }
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Visually hidden for accessibility */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 @media (max-width: 768px) {
-  .container {
-    padding: 0 0.5rem;
-  }
-  
-  .main-content {
-    padding-top: 70px;
+  .text-responsive {
+    font-size: var(--font-size-lg);
   }
 }

@@ -49,10 +49,25 @@ function Profile() {
     return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
   };
 
-  // Determinar qual usuário mostrar (usuário logado ou usuário específico)
+// Determinar qual usuário mostrar (usuário logado ou usuário específico)
   const targetUsername = username || currentUser?.username;
   const isOwnProfile = !username || username === currentUser?.username;
   const displayUser = isOwnProfile ? (profileUser || currentUser) : profileUser;
+
+  // Buscar restaurantes pendentes do usuário
+  const fetchPendingRestaurants = useCallback(async () => {
+    if (!currentUser) return;
+
+    try {
+      setLoadingPending(true);
+      const response = await axios.get('/api/pending-restaurants/user/me');
+      setPendingRestaurants(response.data.pendingRestaurants || []);
+    } catch (error) {
+      console.error('Erro ao buscar restaurantes pendentes:', error);
+    } finally {
+      setLoadingPending(false);
+    }
+  }, [currentUser]);
 
   const fetchUserProfile = useCallback(async () => {
     if (!targetUsername) {
@@ -100,22 +115,7 @@ function Profile() {
       
       setLoading(false);
     }
-  }, [targetUsername, navigate, currentUser, isOwnProfile]);
-
-  // Buscar restaurantes pendentes do usuário
-  const fetchPendingRestaurants = useCallback(async () => {
-    if (!currentUser) return;
-    
-    try {
-      setLoadingPending(true);
-      const response = await axios.get('/api/pending-restaurants/user/me');
-      setPendingRestaurants(response.data.pendingRestaurants || []);
-    } catch (error) {
-      console.error('Erro ao buscar restaurantes pendentes:', error);
-    } finally {
-      setLoadingPending(false);
-    }
-  }, [currentUser]);
+  }, [targetUsername, navigate, currentUser, isOwnProfile, fetchPendingRestaurants]);
 
   const fetchUserPosts = useCallback(async () => {
     if (!targetUsername) return;

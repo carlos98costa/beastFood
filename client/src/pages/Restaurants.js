@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaStar, FaSearch, FaMapMarkerAlt, FaFilter } from 'react-icons/fa';
+import { FaSearch, FaMapMarkerAlt, FaFilter } from 'react-icons/fa';
 import axios from 'axios';
 import './Restaurants.css';
 
