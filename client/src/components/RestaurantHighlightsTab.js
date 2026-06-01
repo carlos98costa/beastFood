@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FaPlus, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiBaseUrl } from '../utils/apiConfig';
 import './RestaurantHighlightsTab.css';
 
 const RestaurantHighlightsTab = ({ restaurant, onHighlightsUpdated }) => {
@@ -15,7 +16,7 @@ const RestaurantHighlightsTab = ({ restaurant, onHighlightsUpdated }) => {
 
   // Configurar axios com token
   const restaurantAxiosRef = useRef(axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: getApiBaseUrl(),
     headers: { 'Content-Type': 'application/json' },
     timeout: 10000
   }));

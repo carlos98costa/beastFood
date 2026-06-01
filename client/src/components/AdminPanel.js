@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import EditRestaurantModal from './EditRestaurantModal';
 import CreateRestaurantModal from './CreateRestaurantModal';
+import { getApiBaseUrl } from '../utils/apiConfig';
 import './AdminPanel.css';
 
 const AdminPanel = ({ onClose, initialTab = 'stats' }) => {
@@ -26,7 +27,7 @@ const AdminPanel = ({ onClose, initialTab = 'stats' }) => {
 
   // Criar instância do axios configurada para este componente (memoizada)
   const adminAxios = useMemo(() => axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: getApiBaseUrl(),
     headers: {
       'Content-Type': 'application/json'
     }

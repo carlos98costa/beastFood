@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { resolveApiUrl } from '../utils/apiConfig';
 import './FollowListModal.css';
 
 const FollowListModal = ({ isOpen, onClose, username, type = 'followers' }) => {
@@ -9,13 +10,7 @@ const FollowListModal = ({ isOpen, onClose, username, type = 'followers' }) => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const resolveUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
-    const normalized = url.startsWith('/') ? url : `/${url}`;
-    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
-  };
+  const resolveUrl = resolveApiUrl;
 
   const fetchList = useCallback(async () => {
     if (!isOpen || !username) return;

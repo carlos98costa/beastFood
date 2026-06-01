@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FaUpload, FaTrash, FaEye, FaTimes, FaImage } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiBaseUrl, resolveApiUrl } from '../utils/apiConfig';
 import './RestaurantPhotoManager.css';
 
 // Criar axios fora do componente para evitar recriação
 const createPhotoAxios = (token) => {
   const instance = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: getApiBaseUrl(),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : ''
@@ -171,10 +172,8 @@ const RestaurantPhotoManager = ({ restaurant, onPhotosUpdated, onClose }) => {
   const getPhotoUrl = (photoPath) => {
     if (!photoPath) return null;
     if (photoPath.startsWith('http')) return photoPath;
-    // Usar a URL completa do backend - garantir que não há duplicação de barras
-    const cleanPath = photoPath.startsWith('/') ? photoPath : `/${photoPath}`;
-    const fullUrl = `http://localhost:5000${cleanPath}`;
-    console.log('🔍 getPhotoUrl:', { photoPath, cleanPath, fullUrl });
+    const fullUrl = resolveApiUrl(photoPath);
+    console.log('🔍 getPhotoUrl:', { photoPath, fullUrl });
     return fullUrl;
   };
 

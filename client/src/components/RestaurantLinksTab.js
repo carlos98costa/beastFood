@@ -3,6 +3,7 @@ import { FaGlobe, FaInstagram, FaSave } from 'react-icons/fa';
 import { SiIfood } from 'react-icons/si';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 const RestaurantLinksTab = ({ restaurant, onLinksUpdated }) => {
   const { token } = useAuth();
@@ -14,7 +15,7 @@ const RestaurantLinksTab = ({ restaurant, onLinksUpdated }) => {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const http = axios.create({ baseURL: 'http://localhost:5000' });
+  const http = axios.create({ baseURL: getApiBaseUrl() });
 
   useEffect(() => {
     if (token) {

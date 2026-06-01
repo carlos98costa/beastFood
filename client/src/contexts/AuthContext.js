@@ -1,17 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
-// Configurar URL base do axios
-const determineBaseURL = () => {
-  if (typeof window !== 'undefined' && window.location) {
-    const protocol = window.location.protocol || 'http:';
-    const hostname = window.location.hostname || 'localhost';
-    return `${protocol}//${hostname}:5000`;
-  }
-  return 'http://localhost:5000';
-};
-
-axios.defaults.baseURL = determineBaseURL();
+axios.defaults.baseURL = getApiBaseUrl();
 axios.defaults.withCredentials = true;
 axios.defaults.timeout = 10000;
 

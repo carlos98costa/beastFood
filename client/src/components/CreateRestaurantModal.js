@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus, FaSave, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiBaseUrl } from '../utils/apiConfig';
 
 const CreateRestaurantModal = ({ isOpen, onClose, onRestaurantCreated }) => {
   const { token } = useAuth();
@@ -15,7 +16,7 @@ const CreateRestaurantModal = ({ isOpen, onClose, onRestaurantCreated }) => {
   const [loading, setLoading] = useState(false);
 
   const api = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: getApiBaseUrl(),
     headers: { 'Content-Type': 'application/json' }
   });
 

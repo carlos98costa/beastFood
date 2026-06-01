@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaTimes, FaMapMarkerAlt, FaGlobe, FaCamera, FaCog, FaStar, FaClock } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiBaseUrl } from '../utils/apiConfig';
 // ImageUpload removido pois não estava sendo utilizado
 import RestaurantPhotoManager from './RestaurantPhotoManager';
 import RestaurantServicesTab from './RestaurantServicesTab';
@@ -31,7 +32,7 @@ const EditRestaurantModal = ({ restaurant, isOpen, onClose, onRestaurantUpdated 
 
   // Configurar axios com token
   const restaurantAxios = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: getApiBaseUrl(),
     headers: {
       'Content-Type': 'application/json'
     }

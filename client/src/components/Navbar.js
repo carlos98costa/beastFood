@@ -6,6 +6,7 @@ import { MdNotifications } from 'react-icons/md';
 import axios from 'axios';
 import CreatePostModal from './CreatePostModal';
 import AdminPanel from './AdminPanel';
+import { resolveApiUrl } from '../utils/apiConfig';
 import './Navbar.css';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -49,13 +50,7 @@ const Navbar = () => {
     return () => ctx.revert();
   }, []);
 
-  const resolveUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
-    const normalized = url.startsWith('/') ? url : `/${url}`;
-    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
-  };
+  const resolveUrl = resolveApiUrl;
 
   const handleSearch = (e) => {
     e.preventDefault();

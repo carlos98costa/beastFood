@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import defaultAvatar from '../assets/default-avatar.svg';
 import defaultCover from '../assets/default-cover.svg';
+import { resolveApiUrl } from '../utils/apiConfig';
 import './ImageUpload.css';
 
 const ImageUpload = ({ 
@@ -22,13 +23,7 @@ const ImageUpload = ({
   const defaultImage = type === 'avatar' ? defaultAvatar : defaultCover;
   // displayImage removido pois não estava sendo utilizado
 
-  const resolveUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
-    const normalized = url.startsWith('/') ? url : `/${url}`;
-    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
-  };
+  const resolveUrl = resolveApiUrl;
 
   const handleFileSelect = (file) => {
     if (!file) return;

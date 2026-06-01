@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FaHeart, FaRegHeart, FaInstagram, FaGlobe } from 'react-icons/fa';
 import { SiIfood } from 'react-icons/si';
+import { resolveApiUrl } from '../utils/apiConfig';
 import './RestaurantCard.css';
 
 const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, onHoursClick, canEdit = false, isLoggedIn = false }) => {
@@ -83,8 +84,7 @@ const RestaurantCard = ({ restaurant, onEdit, onToggleFavorite, onHoursClick, ca
   const getPhotoUrl = (photoPath) => {
     if (!photoPath) return null;
     if (photoPath.startsWith('http')) return photoPath;
-    // Garantir que a URL seja construída corretamente
-    return `http://localhost:5000${photoPath}`;
+    return resolveApiUrl(photoPath);
   };
 
   // Verificar se algum bloco está truncado para exibir o botão "Ver mais"

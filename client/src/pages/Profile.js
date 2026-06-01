@@ -13,6 +13,7 @@ import FollowListModal from '../components/FollowListModal';
 // defaultAvatar removido pois não estava sendo utilizado
 import defaultCover from '../assets/default-cover.svg';
 import './Profile.css';
+import { resolveApiUrl } from '../utils/apiConfig';
 import './Home.css';
 
 function Profile() {
@@ -40,14 +41,8 @@ function Profile() {
   const [loadingPending, setLoadingPending] = useState(false);
   const [showPendingRestaurantsModal, setShowPendingRestaurantsModal] = useState(false);
 
-  // Normaliza URLs relativas de imagens para ambiente de desenvolvimento
-  const resolveUrl = (url) => {
-    if (!url || typeof url !== 'string') return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const isDevClient = typeof window !== 'undefined' && window.location && window.location.port === '3000';
-    const normalized = url.startsWith('/') ? url : `/${url}`;
-    return `${isDevClient ? 'http://localhost:5000' : ''}${normalized}`;
-  };
+  // Normaliza URLs relativas de imagens conforme ambiente.
+  const resolveUrl = resolveApiUrl;
 
 // Determinar qual usuário mostrar (usuário logado ou usuário específico)
   const targetUsername = username || currentUser?.username;
