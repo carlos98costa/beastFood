@@ -351,6 +351,29 @@ DB_PASSWORD=...
 
 ---
 
+## Documentação complementar
+
+A raiz do projeto mantém apenas o README principal. Documentações técnicas e funcionais ficam organizadas em `docs/`:
+
+- [Painel administrativo](docs/admin.md)
+- [Busca de restaurantes com IA](docs/ai-restaurant-search.md)
+- [Google Places](docs/google-places.md)
+- [Integração OpenStreetMap](docs/openstreetmap-integration.md)
+- [Estabelecimentos OpenStreetMap](docs/openstreetmap-establishments.md)
+- [Sistema de comentários](docs/comments.md)
+- [Comentários avançados](docs/comments-advanced.md)
+- [Página de restaurantes](docs/restaurants-page.md)
+- [Página de detalhes do restaurante](docs/restaurant-detail-page.md)
+- [Estabelecimentos](docs/establishments.md)
+- [Card de restaurante](docs/restaurant-card.md)
+- [Restaurantes pendentes](docs/pending-restaurants.md)
+- [Fotos de restaurantes](docs/restaurant-photos.md)
+- [Modo convidado](docs/guest-mode.md)
+- [Notificações](docs/notifications.md)
+- [Mobile: edição e exclusão de posts](docs/mobile-post-edit-delete.md)
+
+---
+
 ## Segurança e boas práticas aplicadas
 
 - Senhas armazenadas com hash via `bcryptjs`.

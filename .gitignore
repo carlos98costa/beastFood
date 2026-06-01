@@ -147,10 +147,18 @@ install.ps1
 setup_simple.ps1
 setup_completo.ps1
 
-# Documentação duplicada
+# Documentação temporária/diagnóstico local
 CONFIGURACAO.md
 RESUMO_CONFIGURACAO.md
 RESOLUCAO_PROBLEMAS.md
+SOLUCAO_*.md
+RESUMO_*.md
+VERIFICACAO_*.md
+*_DIAGNOSTICO.md
+
+# Arquivos locais de debug/teste manual
+debug_*.js
+test_*.html
 
 # Arquivos de imagem desnecessários
 *.png
