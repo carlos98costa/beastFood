@@ -31,7 +31,7 @@ npm start
 
 ### Windows (PowerShell)
 ```powershell
-.\setup_admin.ps1
+.\scripts\windows\setup_admin.ps1
 ```
 
 ### Windows (Batch)
@@ -45,7 +45,7 @@ Após fazer login novamente, o botão "Painel Admin" aparecerá na navbar.
 ## 📁 Arquivos Criados
 - `add_role_column.sql` - Adiciona campo role
 - `set_admin_user.sql` - Define usuário como admin
-- `setup_admin.ps1` - Script PowerShell
+- `scripts/windows/setup_admin.ps1` - Script PowerShell
 - `setup_admin.bat` - Script Batch
 - `SOLUCAO_PAINEL_ADMIN.md` - Solução detalhada
 

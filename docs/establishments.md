@@ -18,7 +18,7 @@ server/
 │   └── estabelecimentos.sql            # Script de criação da tabela
 └── index.js                           # Servidor principal (integrado)
 
-importar_estabelecimentos.js            # Script de importação de dados
+scripts/db/importar_estabelecimentos.js            # Script de importação de dados
 ```
 
 ## 🗄️ Banco de Dados
@@ -159,21 +159,21 @@ DELETE /api/estabelecimentos/estabelecimentos/123
 
 ## 📥 Importação de Dados
 
-### Script: `importar_estabelecimentos.js`
+### Script: `scripts/db/importar_estabelecimentos.js`
 
 #### Uso Básico
 ```bash
 # Dados de exemplo para teste
-node importar_estabelecimentos.js --exemplo
+node scripts/db/importar_estabelecimentos.js --exemplo
 
 # Importar de arquivo JSON
-node importar_estabelecimentos.js dados.json
+node scripts/db/importar_estabelecimentos.js dados.json
 
 # Importar de arquivo CSV
-node importar_estabelecimentos.js dados.csv
+node scripts/db/importar_estabelecimentos.js dados.csv
 
 # Ajuda
-node importar_estabelecimentos.js
+node scripts/db/importar_estabelecimentos.js
 ```
 
 #### Formato JSON

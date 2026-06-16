@@ -283,11 +283,11 @@ const Restaurants = () => {
               className="filter-select"
             >
               <option value="">Todas as faixas</option>
-              <option value="1">R$ (Econômico)</option>
-              <option value="2">R$R$ (Acessível)</option>
-              <option value="3">R$R$R$ (Moderado)</option>
-              <option value="4">R$R$R$R$ (Alto)</option>
-              <option value="5">R$R$R$R$R$ (Premium)</option>
+              <option value="1">$ (Econômico)</option>
+              <option value="2">$$ (Acessível)</option>
+              <option value="3">$$$ (Moderado)</option>
+              <option value="4">$$$$ (Alto)</option>
+              <option value="5">$$$$$ (Premium)</option>
             </select>
           </div>
 

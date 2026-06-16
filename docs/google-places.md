@@ -18,7 +18,7 @@ A integração com **Google Places API** foi implementada com sucesso no BeastFo
 - **Service Layer**: `google-places.service.js`
 - **Controller Layer**: `google-places.controller.js` 
 - **Routes**: `google-places.routes.js`
-- **Script de Importação**: `importar_google_places.js`
+- **Script de Importação**: `scripts/db/importar_google_places.js`
 
 ### ✅ **Dados Inseridos**
 - **12 estabelecimentos** de exemplo de Franca-SP
@@ -118,8 +118,8 @@ server/modules/google-places/
 
 ### **Scripts e Testes:**
 ```
-importar_google_places.js          - Script de importação
-criar_dados_google_exemplo.js      - Dados de exemplo
+scripts/db/importar_google_places.js          - Script de importação
+scripts/db/criar_dados_google_exemplo.js      - Dados de exemplo
 test_google_places_api.html        - Interface de testes
 ```
 
@@ -178,13 +178,13 @@ GOOGLE_PLACES_CITY_LNG=-47.4039
 ### **2. Importação Real (quando tiver API key válida):**
 ```bash
 # Importar todos os tipos
-node importar_google_places.js --todos
+node scripts/db/importar_google_places.js --todos
 
 # Importar apenas restaurantes
-node importar_google_places.js --tipo restaurant
+node scripts/db/importar_google_places.js --tipo restaurant
 
 # Atualizar dados existentes
-node importar_google_places.js --atualizar
+node scripts/db/importar_google_places.js --atualizar
 ```
 
 ---

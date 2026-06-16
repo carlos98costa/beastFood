@@ -15,7 +15,7 @@ O sistema utiliza dados do OpenStreetMap para fornecer informações sobre estab
 
 ### Componentes Criados
 
-- **Script PowerShell**: `importar-franca.ps1` - Importa dados OSM
+- **Script PowerShell**: `scripts/windows/importar-franca.ps1` - Importa dados OSM
 - **Serviço**: `server/modules/osm-estabelecimentos/osm-estabelecimentos.service.js`
 - **Controller**: `server/modules/osm-estabelecimentos/osm-estabelecimentos.controller.js`
 - **Rotas**: `server/modules/osm-estabelecimentos/osm-estabelecimentos.routes.js`
@@ -90,7 +90,7 @@ C:\OSM\
    ```powershell
    # Executar como Administrador
    Set-ExecutionPolicy RemoteSigned
-   .\importar-franca.ps1
+   .\scripts\windows\importar-franca.ps1
    ```
 
 3. **Verificar importação**:
@@ -215,7 +215,7 @@ curl "http://localhost:5000/api/osm-estabelecimentos/nearby?latitude=-20.533&lon
 
 ### 1. View não existe
 **Erro**: `view_exists: false`
-**Solução**: Execute o script `importar-franca.ps1`
+**Solução**: Execute o script `scripts/windows/importar-franca.ps1`
 
 ### 2. View existe mas sem dados
 **Erro**: `total_records: 0`
@@ -281,7 +281,7 @@ Para atualizar os dados OSM:
 
 1. **Baixar nova versão** do arquivo `sudeste-latest.osm.pbf`
 2. **Remover arquivo recortado**: `Remove-Item C:\OSM\franca.osm.pbf`
-3. **Executar script novamente**: `.\importar-franca.ps1`
+3. **Executar script novamente**: `.\scripts\windows\importar-franca.ps1`
 
 **Nota**: O script recria a view, então todos os dados serão atualizados.
 
